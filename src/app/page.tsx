@@ -1,12 +1,11 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { ShieldAlert, Activity, Zap, AlertTriangle, Globe } from 'lucide-react';
 
 const THREAT_CONFIG = [
-  { id: "isr-iran", slug: "israel-strikes-iran-by-march-31-2026", title: "Удар Израиля по Ирану", category: "ISRAEL-IRAN", desc: "Вероятность атаки ЦАХАЛ по Ирану до конца марта." },
-  { id: "us-iran", slug: "us-strikes-iran-by-march-31-2026", title: "Удар США по Ирану", category: "USA-IRAN", desc: "Военная операция США против объектов в Иране." },
-  { id: "iran-isr", slug: "iran-strike-on-israel-by-march-31-2026", title: "Удар Ирана по Израилю", category: "IRAN-ISRAEL", desc: "Ответная атака Тегерана по территории Израиля." },
-  { id: "leb-inv", slug: "israeli-ground-operation-in-lebanon-by-march-31", title: "Операция в Ливане", category: "LEBANON", desc: "Наземная операция в Южном Ливане в этом квартале." }
+  { id: "isr-iran", slug: "israel-strikes-iran-by-march-31-2026", title: "Удар Израиля по Ирану", category: "ISRAEL-IRAN" },
+  { id: "us-iran", slug: "us-strikes-iran-by-march-31-2026", title: "Удар США по Ирану", category: "USA-IRAN" },
+  { id: "iran-isr", slug: "iran-strike-on-israel-by-march-31-2026", title: "Удар Ирана по Израилю", category: "IRAN-ISRAEL" },
+  { id: "leb-inv", slug: "israeli-ground-operation-in-lebanon-by-march-31", title: "Операция в Ливане", category: "LEBANON" }
 ];
 
 export default function Page() {
@@ -14,80 +13,73 @@ export default function Page() {
   const [totalRisk, setTotalRisk] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const fetchPolymarketData = async () => {
-    try {
-      const results = await Promise.all(THREAT_CONFIG.map(async (threat) => {
-        try {
-          // Используем прокси для обхода блокировок (CORS)
-          const response = await fetch(`https://corsproxy.io/?https://gamma-api.polymarket.com/markets?slug=${threat.slug}`);
-          const data = await response.json();
-          if (data && data.length > 0) {
-            const price = parseFloat(data[0].outcomePrices[0]);
-            return { ...threat, prob: Math.round(price * 100) };
-          }
-        } catch (e) { console.error(e); }
-        return { ...threat, prob: 0 };
-      }));
+  const fetchWithProxy = async (slug) => {
+    // Пробуем несколько прокси, если первый не сработает
+    const proxies = [
+      `https://api.allorigins.win/get?url=${encodeURIComponent(`https://gamma-api.polymarket.com/markets?slug=${slug}`)}`,
+      `https://corsproxy.io/?https://gamma-api.polymarket.com/markets?slug=${slug}`
+    ];
 
-      setThreats(results);
-      const activeProbs = results.filter(r => r.prob > 0).map(r => r.prob);
-      setTotalRisk(activeProbs.length > 0 ? Math.round(activeProbs.reduce((a, b) => a + b, 0) / activeProbs.length) : 0);
-    } finally { setLoading(false); }
+    for (const url of proxies) {
+      try {
+        const response = await fetch(url);
+        const result = await response.json();
+        // allorigins оборачивает ответ в поле contents
+        const data = result.contents ? JSON.parse(result.contents) : result;
+        
+        if (data && data.length > 0) return Math.round(parseFloat(data[0].outcomePrices[0]) * 100);
+      } catch (e) { console.error("Proxy error:", e); }
+    }
+    return 0;
   };
 
   useEffect(() => {
-    fetchPolymarketData();
-    const timer = setInterval(fetchPolymarketData, 300000);
-    return () => clearInterval(timer);
+    const load = async () => {
+      const results = await Promise.all(THREAT_CONFIG.map(async (t) => {
+        const p = await fetchWithProxy(t.slug);
+        return { ...t, prob: p };
+      }));
+      setThreats(results);
+      const active = results.filter(r => r.prob > 0);
+      setTotalRisk(active.length > 0 ? Math.round(active.reduce((a, b) => a + b.prob, 0) / active.length) : 0);
+      setLoading(false);
+    };
+    load();
+    const itv = setInterval(load, 60000);
+    return () => clearInterval(itv);
   }, []);
 
-  if (loading) return <div className="min-h-screen bg-black text-green-500 flex items-center justify-center font-mono animate-pulse">_INITIALIZING_THREAT_DATABASE...</div>;
+  if (loading) return <div className="loading">_INITIALIZING_DATABASE...</div>;
 
   return (
-    <main className="min-h-screen bg-black text-gray-400 font-mono p-6 md:p-12">
-      <div className="max-w-5xl mx-auto border border-green-900/30 p-4 md:p-8">
-        
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12 border-b border-green-900/30 pb-8">
-          <div>
-            <h1 className="text-3xl font-black text-green-500 flex items-center gap-2 tracking-tighter">
-              <ShieldAlert className="text-red-600 animate-pulse" /> THREAT_ENGINE_V1.0
-            </h1>
-            <p className="text-[10px] text-green-800 font-bold uppercase tracking-[0.3em] mt-2">Active Geopolitical Vectors // 2026</p>
-          </div>
-          <div className="bg-green-950/20 border-l-2 border-green-500 px-6 py-2">
-            <span className="text-[10px] text-green-700 uppercase block font-bold">Total Risk Index</span>
-            <span className="text-5xl font-black text-green-500 tracking-tighter">{totalRisk}%</span>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {threats.map((threat) => (
-            <div key={threat.id} className="border border-green-900/20 p-6 bg-[#050505] hover:bg-green-950/5 transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <span className="text-[9px] text-green-800 border border-green-900/30 px-2 uppercase font-bold tracking-widest">{threat.category}</span>
-                <span className={`text-3xl font-black ${threat.prob > 40 ? 'text-red-600' : 'text-green-500'}`}>{threat.prob}%</span>
-              </div>
-              <h3 className="text-white font-bold uppercase mb-2 tracking-tight">{threat.title}</h3>
-              <p className="text-[11px] text-gray-600 mb-6 leading-relaxed">{threat.desc}</p>
-              
-              <div className="h-1 bg-gray-900 overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-1000 ${threat.prob > 40 ? 'bg-red-600 shadow-[0_0_8px_rgba(255,0,0,0.5)]' : 'bg-green-600'}`}
-                  style={{ width: `${threat.prob}%` }}
-                ></div>
-              </div>
-            </div>
-          ))}
+    <main>
+      <header style={{borderBottom: '1px solid #004400', marginBottom: '30px', paddingBottom: '20px'}}>
+        <h1 style={{fontSize: '2rem', color: '#00ff00'}}>THREAT_ENGINE_V1.0</h1>
+        <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '10px'}}>
+          <span style={{fontSize: '10px'}}>STATUS: OPERATIONAL</span>
+          <span style={{fontSize: '24px', color: '#00ff00'}}>INDEX: {totalRisk}%</span>
         </div>
+      </header>
 
-        <footer className="mt-12 flex justify-between text-[9px] text-gray-700 uppercase tracking-widest font-bold border-t border-green-900/10 pt-4">
-          <div className="flex gap-4">
-            <span className="flex items-center gap-1 text-green-900"><Activity size={10} /> Live_Feed</span>
-            <span className="flex items-center gap-1 text-green-900"><Zap size={10} /> Sync_Status_OK</span>
+      {threats.map(t => (
+        <div key={t.id} className="threat-card">
+          <div style={{display: 'flex', justifyContent: 'space-between'}}>
+            <span style={{fontSize: '12px', opacity: 0.6}}>{t.category}</span>
+            <span className={`risk-value ${t.prob > 40 ? 'critical-text' : ''}`}>{t.prob}%</span>
           </div>
-          <span className="text-red-900/50 italic underline">Confidential // Monitoring_Only</span>
-        </footer>
-      </div>
+          <h2 style={{fontSize: '1.2rem', margin: '10px 0'}}>{t.title}</h2>
+          <div className="progress-container">
+            <div 
+              className={`progress-fill ${t.prob > 40 ? 'critical' : ''}`} 
+              style={{width: `${t.prob || 5}%`}} 
+            />
+          </div>
+        </div>
+      ))}
+      
+      <footer style={{fontSize: '10px', opacity: 0.4, marginTop: '40px', textAlign: 'center'}}>
+        CONFIDENTIAL // POLYMARKET_REALTIME_SYNC // 2026
+      </footer>
     </main>
   );
 }
