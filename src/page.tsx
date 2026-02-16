@@ -12,67 +12,91 @@ export default function ThreatEngine() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const getProb = async (slug) => {
+  const fetchProb = async (slug) => {
     try {
-      // Используем надежный прокси allorigins для обхода CORS
-      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://gamma-api.polymarket.com/markets?slug=${slug}`)}`);
-      const json = await res.json();
-      const markets = JSON.parse(json.contents);
-      if (markets && markets.length > 0) {
-        return Math.round(parseFloat(markets[0].outcomePrices[0]) * 100);
+      // Используем прямой запрос к API с параметром метки времени, чтобы избежать кэширования
+      const response = await fetch(`https://gamma-api.polymarket.com/markets?slug=${slug}&t=${Date.now()}`);
+      
+      if (!response.ok) return 0;
+      
+      const markets = await response.json();
+      if (markets && markets.length > 0 && markets[0].outcomePrices) {
+        // Берем цену первого исхода (обычно "Yes")
+        const price = parseFloat(markets[0].outcomePrices[0]);
+        return Math.round(price * 100);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(`Error fetching ${slug}:`, e);
+    }
     return 0;
   };
 
   useEffect(() => {
     const update = async () => {
       const results = await Promise.all(THREATS.map(async (t) => {
-        const p = await getProb(t.slug);
+        const p = await fetchProb(t.slug);
         return { ...t, prob: p };
       }));
+      
       setData(results);
       setLoading(false);
     };
+
     update();
-    const interval = setInterval(update, 30000); // Обновление каждые 30 сек
+    const interval = setInterval(update, 60000); // Обновление раз в минуту
     return () => clearInterval(interval);
   }, []);
 
-  const totalRisk = data.length > 0 ? Math.round(data.reduce((a, b) => a + b.prob, 0) / data.length) : 0;
+  // Расчет индекса (защита от NaN: если данных нет, показываем 0)
+  const totalRisk = data.length > 0 
+    ? Math.round(data.reduce((acc, curr) => acc + (curr.prob || 0), 0) / data.length) 
+    : 0;
 
-  if (loading) return <div style={{background:'#000',color:'#0f0',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'monospace'}}>_SCANNING_VECTORS...</div>;
+  if (loading) return (
+    <div style={{ background:'#000', color:'#0f0', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'monospace' }}>
+      [ SCANNING_GLOBAL_VECTORS... ]
+    </div>
+  );
 
   return (
-    <div style={{ backgroundColor: '#000', color: '#0f0', minHeight: '100vh', padding: '30px', fontFamily: 'monospace', boxSizing: 'border-box' }}>
+    <div style={{ backgroundColor: '#000', color: '#0f0', minHeight: '100vh', padding: '30px', fontFamily: 'monospace' }}>
       <header style={{ borderBottom: '1px solid #0f0', paddingBottom: '20px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '28px', letterSpacing: '2px' }}>THREAT_ENGINE_V2.1</h1>
-          <div style={{ fontSize: '10px', marginTop: '5px', color: '#006600' }}>GEOPOLITICAL_DATALINK_ACTIVE</div>
+          <h1 style={{ margin: 0, fontSize: '24px', letterSpacing: '1px' }}>THREAT_ENGINE_V2.2</h1>
+          <div style={{ fontSize: '10px', color: '#006600' }}>SYSTEM_TIME: {new Date().toISOString()}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '12px' }}>GLOBAL_RISK</div>
-          <div style={{ fontSize: '42px', fontWeight: 'bold' }}>{totalRisk}%</div>
+          <div style={{ fontSize: '10px', color: '#006600' }}>GLOBAL_RISK_INDEX</div>
+          <div style={{ fontSize: '48px', fontWeight: 'bold', lineHeight: '1' }}>{totalRisk}%</div>
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '25px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
         {data.map((item, idx) => (
-          <div key={idx} style={{ border: '1px solid #004400', padding: '20px', background: '#050505', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-              <span style={{ fontSize: '10px', background: '#004400', color: '#000', padding: '2px 6px' }}>{item.cat}</span>
-              <span style={{ fontSize: '32px', fontWeight: 'bold', color: item.prob > 40 ? '#f00' : '#0f0' }}>{item.prob}%</span>
+          <div key={idx} style={{ border: '1px solid #003300', padding: '20px', background: '#050505', boxShadow: '0 0 10px rgba(0,255,0,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+              <span style={{ fontSize: '9px', border: '1px solid #006600', padding: '2px 6px' }}>{item.cat}</span>
+              <span style={{ fontSize: '28px', fontWeight: 'bold', color: item.prob > 40 ? '#f00' : '#0f0' }}>
+                {item.prob}%
+              </span>
             </div>
-            <h3 style={{ fontSize: '16px', margin: '0 0 20px 0', lineHeight: '1.4' }}>{item.title.toUpperCase()}</h3>
-            <div style={{ height: '6px', background: '#111', width: '100%' }}>
-              <div style={{ height: '100%', width: `${item.prob}%`, background: item.prob > 40 ? '#f00' : '#0f0', transition: 'width 2s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+            <h3 style={{ fontSize: '14px', margin: '0 0 20px 0', minHeight: '40px' }}>{item.title.toUpperCase()}</h3>
+            
+            <div style={{ height: '2px', background: '#111' }}>
+              <div style={{ 
+                height: '100%', 
+                width: `${item.prob}%`, 
+                background: item.prob > 40 ? '#f00' : '#0f0',
+                boxShadow: item.prob > 40 ? '0 0 10px #f00' : 'none',
+                transition: 'width 2s ease-in-out' 
+              }} />
             </div>
           </div>
         ))}
       </div>
 
-      <footer style={{ marginTop: '60px', borderTop: '1px solid #002200', paddingTop: '20px', fontSize: '10px', color: '#004400', textAlign: 'center', letterSpacing: '1px' }}>
-        ESTABLISHED_CONNECTION: 2026_SAT_LINK // DATA_STREAM_ENCRYPTED
+      <footer style={{ marginTop: '60px', textAlign: 'center', fontSize: '10px', color: '#003300' }}>
+        ESTABLISHED_LINK: 2026_UNIT_ALPHA // SOURCE: POLYMARKET_GAMMA_API
       </footer>
     </div>
   );
