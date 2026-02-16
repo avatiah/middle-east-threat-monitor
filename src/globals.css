@@ -1,8 +1,48 @@
+/* Базовые настройки для терминального вида */
+body {
+  background-color: #000000 !important;
+  color: #00ff00 !important;
+  font-family: 'Courier New', Courier, monospace !important;
+  margin: 0;
+  padding: 0;
+}
+
+/* Стилизация контейнеров */
+main {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.threat-card {
+  border: 1px solid #004400;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: #050505;
+}
+
+.risk-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+}
+
+.progress-container {
+  height: 10px;
+  background: #111;
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #002200;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #00ff00;
+  transition: width 1s ease-in-out;
+}
+
+.critical { background-color: #ff0000 !important; }
+.critical-text { color: #ff0000 !important; }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-body {
-  background: black;
-  color: #cccccc;
-}
