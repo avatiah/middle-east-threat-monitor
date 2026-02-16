@@ -10,19 +10,32 @@ const SLUGS = [
 export async function GET() {
   try {
     const results = await Promise.all(SLUGS.map(async (slug) => {
-      // Серверный запрос к Gamma API не ограничен политикой CORS браузера
       const res = await fetch(`https://gamma-api.polymarket.com/markets?slug=${slug}`, {
-        next: { revalidate: 30 } // Кэширование на 30 секунд для молниеносной загрузки
+        next: { revalidate: 30 }
       });
-      
-      if (!res.ok) return null;
       const data = await res.json();
-      return data[0] || null;
+      
+      if (data && data.length > 0) {
+        const market = data[0];
+        
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Парсим outcomePrices, если это строка
+        let prices = market.outcomePrices;
+        if (typeof prices === 'string') {
+          prices = JSON.parse(prices);
+        }
+
+        return {
+          question: market.question,
+          prob: prices && prices.length > 0 ? Math.round(parseFloat(prices[0]) * 100) : 0,
+          category: market.groupItemTitle || "SECTOR_UNKNOWN"
+        };
+      }
+      return null;
     }));
 
-    // Фильтруем пустые результаты и возвращаем JSON
     return NextResponse.json(results.filter(Boolean));
   } catch (error) {
-    return NextResponse.json({ error: "API sync failed" }, { status: 500 });
+    console.error("Fetch error:", error);
+    return NextResponse.json({ error: "API_OFFLINE" }, { status: 500 });
   }
 }
