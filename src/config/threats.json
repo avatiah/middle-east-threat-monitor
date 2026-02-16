@@ -1,0 +1,31 @@
+{
+  "threats": [
+    {
+      "id": "iran-israel-attack",
+      "slug": "iran-israel-conflict",
+      "title": "Удар Ирана по Израилю",
+      "description": "Прямая военная атака со стороны Тегерана",
+      "polyId": "217411", 
+      "active": true,
+      "category": "Israel"
+    },
+    {
+      "id": "us-iran-strike",
+      "slug": "us-iran-strike",
+      "title": "Удар США по Ирану",
+      "description": "Военная операция США против объектов в Иране",
+      "polyId": "32155",
+      "active": true,
+      "category": "Regional"
+    },
+    {
+      "id": "hezbollah-war",
+      "slug": "hezbollah-war",
+      "title": "Полномасштабная война с Хезболлой",
+      "description": "Наземная операция на северной границе",
+      "polyId": "45678",
+      "active": false,
+      "category": "Israel"
+    }
+  ]
+}
