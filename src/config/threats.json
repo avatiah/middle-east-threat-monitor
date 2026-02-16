@@ -1,44 +1,44 @@
 {
   "threats": [
     {
-      "id": "israel-strike-iran-feb",
-      "slug": "israel-strikes-iran-by-february-28-2026",
-      "title": "Удар Израиля по Ирану (Февраль)",
-      "description": "Прямая атака ВВС или ракетами по территории Ирана до конца месяца.",
+      "id": "isr-iran-strike",
+      "slug": "israel-strikes-iran-by-march-31-2026",
+      "title": "Удар Израиля по Ирану",
+      "description": "Прямая военная атака Израиля по суверенной территории Ирана до конца марта 2026.",
       "active": true,
-      "category": "Israel"
+      "category": "Israel-Iran"
     },
     {
-      "id": "us-strike-iran-march",
+      "id": "us-iran-strike",
       "slug": "us-strikes-iran-by-march-31-2026",
-      "title": "Удар США по Ирану (Март)",
-      "description": "Военная операция США против объектов КСИР или ядерной программы.",
+      "title": "Удар США по Ирану",
+      "description": "Кибератака или кинетический удар вооруженных сил США по объектам на территории Ирана.",
       "active": true,
-      "category": "USA"
+      "category": "USA-Iran"
     },
     {
-      "id": "iran-strike-israel-feb",
-      "slug": "iran-strike-on-israel-by-february-28-2026",
-      "title": "Удар Ирана по Израилю",
-      "description": "Ответная атака Тегерана непосредственно по израильской территории.",
+      "id": "iran-israel-strike",
+      "slug": "iran-strike-on-israel-by-march-31-2026",
+      "title": "Ответный удар Ирана",
+      "description": "Прямая атака Ирана (ракеты/дроны) по территории Израиля в ответ на эскалацию.",
       "active": true,
-      "category": "Iran"
+      "category": "Iran-Israel"
     },
     {
-      "id": "lebanon-war-daily",
-      "slug": "will-israel-strike-lebanon-on-february-19",
-      "title": "Эскалация в Ливане",
-      "description": "Прогноз активных боевых действий на северной границе на ближайшие 24-48 часов.",
+      "id": "lebanon-invasion",
+      "slug": "israeli-ground-operation-in-lebanon-by-march-31",
+      "title": "Операция в Ливане",
+      "description": "Начало полномасштабной наземной операции ЦАХАЛ на территории южного Ливана.",
       "active": true,
-      "category": "Israel"
+      "category": "Lebanon"
     },
     {
-      "id": "khamenei-status",
-      "slug": "khamenei-out-as-supreme-leader-of-iran-by-march-31",
-      "title": "Смена власти в Иране",
-      "description": "Уход Али Хаменеи с поста Верховного лидера (по состоянию здоровья или иным причинам).",
+      "id": "gaza-ceasefire",
+      "slug": "gaza-ceasefire-by-march-31-2026",
+      "title": "Перемирие в Газе",
+      "description": "Заключение официального соглашения о прекращении огня (снижает общий индекс риска).",
       "active": true,
-      "category": "Regional"
+      "category": "Diplomacy"
     }
   ]
 }
