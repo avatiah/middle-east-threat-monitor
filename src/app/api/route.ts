@@ -10,16 +10,19 @@ const SLUGS = [
 export async function GET() {
   try {
     const results = await Promise.all(SLUGS.map(async (slug) => {
-      // Запрос идет от сервера Vercel, он не блокируется CORS
+      // Серверный запрос к Gamma API не ограничен политикой CORS браузера
       const res = await fetch(`https://gamma-api.polymarket.com/markets?slug=${slug}`, {
-        next: { revalidate: 30 } // Кэш на 30 секунд для скорости
+        next: { revalidate: 30 } // Кэширование на 30 секунд для молниеносной загрузки
       });
+      
+      if (!res.ok) return null;
       const data = await res.json();
       return data[0] || null;
     }));
 
+    // Фильтруем пустые результаты и возвращаем JSON
     return NextResponse.json(results.filter(Boolean));
   } catch (error) {
-    return NextResponse.json({ error: "API Offline" }, { status: 500 });
+    return NextResponse.json({ error: "API sync failed" }, { status: 500 });
   }
 }
