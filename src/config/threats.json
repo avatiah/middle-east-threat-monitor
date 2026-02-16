@@ -1,31 +1,44 @@
 {
   "threats": [
     {
-      "id": "iran-israel-attack",
-      "slug": "iran-israel-conflict",
-      "title": "Удар Ирана по Израилю",
-      "description": "Прямая военная атака со стороны Тегерана",
-      "polyId": "217411", 
+      "id": "israel-strike-iran-feb",
+      "slug": "israel-strikes-iran-by-february-28-2026",
+      "title": "Удар Израиля по Ирану (Февраль)",
+      "description": "Прямая атака ВВС или ракетами по территории Ирана до конца месяца.",
       "active": true,
       "category": "Israel"
     },
     {
-      "id": "us-iran-strike",
-      "slug": "us-iran-strike",
-      "title": "Удар США по Ирану",
-      "description": "Военная операция США против объектов в Иране",
-      "polyId": "32155",
+      "id": "us-strike-iran-march",
+      "slug": "us-strikes-iran-by-march-31-2026",
+      "title": "Удар США по Ирану (Март)",
+      "description": "Военная операция США против объектов КСИР или ядерной программы.",
+      "active": true,
+      "category": "USA"
+    },
+    {
+      "id": "iran-strike-israel-feb",
+      "slug": "iran-strike-on-israel-by-february-28-2026",
+      "title": "Удар Ирана по Израилю",
+      "description": "Ответная атака Тегерана непосредственно по израильской территории.",
+      "active": true,
+      "category": "Iran"
+    },
+    {
+      "id": "lebanon-war-daily",
+      "slug": "will-israel-strike-lebanon-on-february-19",
+      "title": "Эскалация в Ливане",
+      "description": "Прогноз активных боевых действий на северной границе на ближайшие 24-48 часов.",
+      "active": true,
+      "category": "Israel"
+    },
+    {
+      "id": "khamenei-status",
+      "slug": "khamenei-out-as-supreme-leader-of-iran-by-march-31",
+      "title": "Смена власти в Иране",
+      "description": "Уход Али Хаменеи с поста Верховного лидера (по состоянию здоровья или иным причинам).",
       "active": true,
       "category": "Regional"
-    },
-    {
-      "id": "hezbollah-war",
-      "slug": "hezbollah-war",
-      "title": "Полномасштабная война с Хезболлой",
-      "description": "Наземная операция на северной границе",
-      "polyId": "45678",
-      "active": false,
-      "category": "Israel"
     }
   ]
 }
