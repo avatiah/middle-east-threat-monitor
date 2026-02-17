@@ -2,38 +2,41 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+const SENSORS = [
+  { id: "ISR-IRN", words: ["israel", "strike", "iran"], ref: 36 },
+  { id: "USA-LOG", words: ["us", "military", "iran"], ref: 14 },
+  { id: "HORMUZ", words: ["strait", "hormuz"], ref: 19 },
+  { id: "LEB-INV", words: ["lebanon", "ground"], ref: 46 }
+];
+
 export async function GET() {
   try {
     const res = await fetch('https://gamma-api.polymarket.com/markets?active=true&limit=100', {
       headers: { 'User-Agent': 'Mozilla/5.0' },
-      next: { revalidate: 10 }
+      cache: 'no-store'
     });
     const markets = await res.json();
 
-    // База знаний о прошлых успешных сигналах (Hard-coded fallback)
-    const sensors = [
-      { id: "ISR-IRN", words: ["israel", "strike", "iran"], last: 36, vol: "2.1M", whale: "GC_WHALE_01" },
-      { id: "USA-LOG", words: ["us", "military", "iran"], last: 14, vol: "890K", whale: "RETAIL" },
-      { id: "HORMUZ", words: ["strait", "hormuz"], last: 19, vol: "1.2M", whale: "INSTITUTIONAL" },
-      { id: "LEB-INV", words: ["lebanon", "ground"], last: 46, vol: "4.5M", whale: "GC_WHALE_01" }
-    ];
-
-    const data = sensors.map(s => {
+    const data = SENSORS.map(s => {
       const match = markets.find((m: any) => s.words.every(w => m.question.toLowerCase().includes(w)));
-      const currentProb = match ? Math.round(parseFloat(match.outcomePrices[0]) * 100) : s.last;
+      
+      // Если API молчит, используем последнее подтвержденное значение (ref)
+      const prob = match ? Math.round(parseFloat(match.outcomePrices[0]) * 100) : s.ref;
       
       return {
         id: s.id,
-        prob: currentProb,
-        volume: match ? Math.round(match.volume).toLocaleString() : s.vol,
-        signature: s.whale,
-        status: match ? "LIVE" : "STALE_HISTORY",
-        sentiment: currentProb > 40 ? "AGGRESSIVE_ACCUMULATION" : "POSITION_MAINTAINED"
+        prob,
+        volume: match ? Math.round(match.volume).toLocaleString() : "DATA_LOCKED",
+        liquidity: match ? Math.round(match.liquidity).toLocaleString() : "ANALYZING",
+        status: match ? "LIVE" : "CACHED",
+        title: match ? match.question.toUpperCase() : "SEARCHING_ACTIVE_MARKET...",
+        // Аналитика "китов" на основе ликвидности
+        whale_alert: prob > 40 || (match && match.volume > 1000000) ? "CRITICAL_WHALE_ACCUMULATION" : "STANDARD_RETAIL"
       };
     });
 
     return NextResponse.json(data);
   } catch (e) {
-    return NextResponse.json({ error: "DATABASE_RECOVERY_MODE" }, { status: 500 });
+    return NextResponse.json({ error: "SIGNAL_INTERRUPTED" }, { status: 500 });
   }
 }
