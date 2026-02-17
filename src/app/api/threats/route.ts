@@ -1,58 +1,49 @@
-import { NextResponse } from 'next/server'; // Обязательный импорт для работы API в Next.js
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const SENSORS = [
-  { 
-    id: "ISR-IRN", 
-    tags: ["israel", "strike", "iran"], 
-    timeframe: "до 31 марта 2026", 
-    base: 36, 
-    detail: "Вероятность авиационного или ракетного удара Израиля по территории Ирана. Считается ключевым триггером большой войны." 
-  },
-  { 
-    id: "USA-STRIKE", 
-    tags: ["us", "strikes", "iran"], 
-    timeframe: "до 28 февраля 2026", 
-    base: 14, 
-    detail: "Прямое военное вмешательство США. Низкий процент (14%) говорит о том, что рынок ждет действий скорее от союзников, чем от Вашингтона напрямую." 
-  },
-  { 
-    id: "HORMUZ", 
-    tags: ["strait", "hormuz", "close"], 
-    timeframe: "до 31 декабря 2026", 
-    base: 19, 
-    detail: "Перекрытие Ормузского пролива Ираном. Это приведет к мировому энергетическому кризису. Сейчас риск оценивается как умеренный." 
-  },
-  { 
-    id: "LEB-INV", 
-    tags: ["lebanon", "ground"], 
-    timeframe: "до 31 марта 2026", 
-    base: 46, 
-    detail: "Наземная операция ЦАХАЛ в Ливане. Самый горячий узел. Превышение порога 45% сигнализирует о высокой уверенности инсайдеров в начале операции." 
-  }
-];
-
 export async function GET() {
   try {
-    const res = await fetch('https://gamma-api.polymarket.com/markets?active=true&limit=100', { cache: 'no-store' });
+    // Прямой запрос к API Polymarket без промежуточного кэша
+    const res = await fetch('https://gamma-api.polymarket.com/markets?active=true&limit=100', {
+      method: 'GET',
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+    });
+    
     const markets = await res.json();
+    
+    const findProb = (tags: string[]) => {
+      const match = markets.find((m: any) => tags.every(t => m.question.toLowerCase().includes(t)));
+      return match ? Math.round(parseFloat(match.outcomePrices[0]) * 100) : null;
+    };
 
-    const data = SENSORS.map(s => {
-      const match = markets.find((m: any) => s.tags.every(t => m.question.toLowerCase().includes(t)));
-      const prob = match ? Math.round(parseFloat(match.outcomePrices[0]) * 100) : s.base;
+    const getDeadline = (tags: string[]) => {
+      const match = markets.find((m: any) => tags.every(t => m.question.toLowerCase().includes(t)));
+      return match ? new Date(match.endDate).toLocaleDateString('ru-RU') : "DATA_STREAM_ERROR";
+    };
+
+    const nodes = [
+      { id: "ISR-IRN", tags: ["israel", "strike", "iran"], detail: "Удар Израиля по Ирану." },
+      { id: "USA-STRIKE", tags: ["us", "strikes", "iran"], detail: "Удар США по объектам Ирана." },
+      { id: "HORMUZ", tags: ["strait", "hormuz"], detail: "Закрытие Ормузского пролива." },
+      { id: "LEB-INV", tags: ["lebanon", "ground"], detail: "Наземная операция в Ливане." }
+    ].map(node => {
+      const prob = findProb(node.tags);
+      if (prob === null) throw new Error(`STALE_DATA_DETECTED_${node.id}`);
       
       return {
-        ...s,
+        ...node,
         prob,
-        // Визуализация ставки кита GC_WHALE_01 на основе ваших данных
-        whale_bet: s.id === "LEB-INV" ? "142,000 USD" : "N/A",
-        whale_id: s.id === "LEB-INV" ? "GC_WHALE_01" : null,
-        status: match ? "LIVE" : "STABLE_CACHE"
+        timeframe: getDeadline(node.tags),
+        // Прямое извлечение объема и ликвидности для детекции реальных ставок
+        volume: markets.find((m: any) => node.tags.every(t => m.question.toLowerCase().includes(t)))?.volume || 0,
+        status: "LIVE_DATA_FEED"
       };
     });
-    return NextResponse.json(data);
+
+    return NextResponse.json(nodes);
   } catch (e) {
-    return NextResponse.json(SENSORS.map(s => ({...s, prob: s.base, status: "OFFLINE_PROTECT"})));
+    // Если данные не обновились или API не отвечает - возвращаем статус ошибки, а не старые %
+    return NextResponse.json({ error: "CRITICAL_SYNC_FAILURE", detail: "Real-time data stream interrupted" }, { status: 503 });
   }
 }
