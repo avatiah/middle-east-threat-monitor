@@ -2,51 +2,39 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const SENSORS = [
-  { id: "ISR-IRN", words: ["israel", "iran"] },
-  { id: "USA-IRN", words: ["us", "iran", "military"] },
-  { id: "IRN-ISR", words: ["iran", "attack", "israel"] },
-  { id: "LEB-OPS", words: ["lebanon", "israel"] }
+const MARKETS = [
+  { id: "ISR-IRN", slug: "israel-strikes-iran-by-march-31-2026" },
+  { id: "USA-IRN", slug: "us-military-strikes-iran-by-march-31" },
+  { id: "IRN-ISR", slug: "iran-strikes-israel-by-march-31-2026" },
+  { id: "LEB-OPS", slug: "israeli-ground-operation-in-lebanon-by-march-31" }
 ];
 
 export async function GET() {
   try {
-    // Делаем два целевых запроса, чтобы не пропустить рынки из разных категорий
-    const [res1, res2] = await Promise.all([
-      fetch('https://gamma-api.polymarket.com/markets?active=true&limit=100&query=iran', { cache: 'no-store' }),
-      fetch('https://gamma-api.polymarket.com/markets?active=true&limit=50&query=lebanon', { cache: 'no-store' })
-    ]);
+    const data = await Promise.all(MARKETS.map(async (m) => {
+      try {
+        const res = await fetch(`https://gamma-api.polymarket.com/markets?slug=${m.slug}`, {
+          next: { revalidate: 0 }
+        });
+        const json = await res.json();
+        const market = Array.isArray(json) ? json[0] : json;
 
-    const m1 = await res1.json();
-    const m2 = await res2.json();
-    const all = [...m1, ...m2];
+        if (!market || !market.outcomePrices) return { id: m.id, prob: 0, status: "OFFLINE" };
 
-    const results = SENSORS.map(s => {
-      // Ищем наиболее подходящий рынок по ключевым словам
-      const match = all.find(m => 
-        s.words.every(word => m.question.toLowerCase().includes(word))
-      );
-
-      if (!match) return { id: s.id, prob: 0, status: "OFFLINE", title: `NO_DATA_FOR_${s.id}` };
-
-      // Надежный парсинг цены (обрабатывает и строки, и массивы)
-      let price = 0;
-      const raw = match.outcomePrices;
-      if (raw) {
-        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        price = parseFloat(parsed[0]);
+        const prices = typeof market.outcomePrices === 'string' ? JSON.parse(market.outcomePrices) : market.outcomePrices;
+        return {
+          id: m.id,
+          prob: Math.round(parseFloat(prices[0]) * 100),
+          title: market.question.toUpperCase(),
+          status: "LIVE"
+        };
+      } catch {
+        return { id: m.id, prob: 0, status: "ERROR" };
       }
+    }));
 
-      return {
-        id: s.id,
-        prob: Math.round(price * 100) || 0,
-        status: "LIVE",
-        title: match.question.toUpperCase()
-      };
-    });
-
-    return NextResponse.json(results);
+    return NextResponse.json(data);
   } catch (e) {
-    return NextResponse.json({ error: "UPLINK_FAILURE" }, { status: 500 });
+    return NextResponse.json({ error: "CRITICAL_UPLINK_LOST" }, { status: 500 });
   }
 }
