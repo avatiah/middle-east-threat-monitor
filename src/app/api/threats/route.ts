@@ -3,47 +3,43 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 const SENSORS = [
-  { id: "ISR-IRN", tags: ["israel", "strike", "iran"] },
-  { id: "USA-IRN", tags: ["us", "military", "iran"] },
-  { id: "IRN-ISR", tags: ["iran", "strike", "israel"] },
-  { id: "LEB-OPS", tags: ["israel", "lebanon", "ground"] }
+  { id: "ISR-IRN", words: ["israel", "iran"] },
+  { id: "USA-IRN", words: ["us", "iran", "military"] },
+  { id: "IRN-ISR", words: ["iran", "attack", "israel"] },
+  { id: "LEB-OPS", words: ["lebanon", "israel"] }
 ];
 
 export async function GET() {
-  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
-
   try {
-    // 1. Принудительный дамп всех активных рынков (увеличиваем лимит)
-    const response = await fetch('https://gamma-api.polymarket.com/markets?active=true&limit=1000&closed=false', {
-      headers: { 'User-Agent': UA },
-      next: { revalidate: 0 }
-    });
-    
-    const allMarkets = await response.json();
+    // Делаем два целевых запроса, чтобы не пропустить рынки из разных категорий
+    const [res1, res2] = await Promise.all([
+      fetch('https://gamma-api.polymarket.com/markets?active=true&limit=100&query=iran', { cache: 'no-store' }),
+      fetch('https://gamma-api.polymarket.com/markets?active=true&limit=50&query=lebanon', { cache: 'no-store' })
+    ]);
 
-    const results = SENSORS.map(sensor => {
-      // 2. Поиск по весам: ищем рынок, где максимум совпадений тегов
-      const match = allMarkets
-        .map((m: any) => ({
-          market: m,
-          score: sensor.tags.filter(t => m.question.toLowerCase().includes(t)).length
-        }))
-        .filter(m => m.score >= 2)
-        .sort((a, b) => b.score - a.score)[0]?.market;
+    const m1 = await res1.json();
+    const m2 = await res2.json();
+    const all = [...m1, ...m2];
 
-      if (!match) return { id: sensor.id, prob: 0, status: "SEARCHING", title: `NO ACTIVE DATA FOR ${sensor.id}` };
+    const results = SENSORS.map(s => {
+      // Ищем наиболее подходящий рынок по ключевым словам
+      const match = all.find(m => 
+        s.words.every(word => m.question.toLowerCase().includes(word))
+      );
 
-      // 3. Извлечение цены из структуры 2026 года
+      if (!match) return { id: s.id, prob: 0, status: "OFFLINE", title: `NO_DATA_FOR_${s.id}` };
+
+      // Надежный парсинг цены (обрабатывает и строки, и массивы)
       let price = 0;
-      const raw = match.outcomePrices || match.price;
-      try {
+      const raw = match.outcomePrices;
+      if (raw) {
         const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        price = Array.isArray(parsed) ? parseFloat(parsed[0]) : parseFloat(parsed);
-      } catch { price = parseFloat(raw || "0"); }
+        price = parseFloat(parsed[0]);
+      }
 
       return {
-        id: sensor.id,
-        prob: Math.round(price * 100),
+        id: s.id,
+        prob: Math.round(price * 100) || 0,
         status: "LIVE",
         title: match.question.toUpperCase()
       };
@@ -51,6 +47,6 @@ export async function GET() {
 
     return NextResponse.json(results);
   } catch (e) {
-    return NextResponse.json({ error: "DATABASE_UNREACHABLE" }, { status: 500 });
+    return NextResponse.json({ error: "UPLINK_FAILURE" }, { status: 500 });
   }
 }
