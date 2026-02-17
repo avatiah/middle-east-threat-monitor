@@ -1,58 +1,70 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
-export default function IntelDashboardV24() {
-  const [data, setData] = useState<any[]>([]);
+export default function V25BrightOS() {
+  const [nodes, setNodes] = useState<any[]>([]);
 
-  useEffect(() => { 
+  useEffect(() => {
     const sync = async () => {
       const res = await fetch('/api/threats');
-      const json = await res.json();
-      if (Array.isArray(json)) setData(json);
+      const data = await res.json();
+      if (Array.isArray(data)) setNodes(data);
     };
-    sync(); const i = setInterval(sync, 5000); return () => clearInterval(i); 
+    sync(); const i = setInterval(sync, 10000); return () => clearInterval(i);
   }, []);
 
   return (
-    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '25px', fontFamily: 'monospace' }}>
+    <div style={{ background: '#0f172a', color: '#f8fafc', minHeight: '100vh', padding: '30px', fontFamily: 'Inter, monospace' }}>
       
       {/* HEADER */}
-      <div style={{ border: '1px solid #0f0', padding: '20px', marginBottom: '20px' }}>
-        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>STRATEGIC_INTELLIGENCE_OS // V24.5</div>
-        <div style={{ fontSize: '10px', opacity: 0.6 }}>STATUS: UPLINK_ACTIVE // TARGET: POLYMARKET_REALTIME</div>
+      <div style={{ borderBottom: '2px solid #38bdf8', paddingBottom: '15px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ margin: 0, fontSize: '24px', letterSpacing: '1px' }}>STRATEGIC_OS_V25.0 // <span style={{color: '#38bdf8'}}>BRIGHT_INTELLIGENCE</span></h1>
+        <div style={{ background: '#38bdf8', color: '#0f172a', padding: '5px 10px', fontSize: '12px', fontWeight: 'bold', borderRadius: '4px' }}>UPLINK_STABLE</div>
       </div>
 
-      {/* SENSORS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' }}>
-        {data.map((n, i) => (
-          <div key={i} style={{ border: '1px solid #333', padding: '15px', background: '#050505' }}>
-            <div style={{ fontSize: '10px', color: '#555' }}>NODE: {n.id}</div>
-            <div style={{ fontSize: '52px', fontWeight: 'bold', color: n.prob > 40 ? '#f00' : '#0f0' }}>{n.prob}%</div>
-            <div style={{ fontSize: '9px', color: '#888' }}>ВЕРОЯТНОСТЬ СОБЫТИЯ ПО РЫНКУ</div>
+      {/* PRIMARY NODES */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+        {nodes.map((n, i) => (
+          <div key={i} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', marginBottom: '10px' }}>
+              <span>ID: {n.id}</span>
+              <span style={{ color: n.prob > 35 ? '#ef4444' : '#10b981' }}>{n.prob > 35 ? 'CRITICAL' : 'MONITOR'}</span>
+            </div>
+            
+            <div style={{ fontSize: '64px', fontWeight: '800', margin: '10px 0', color: n.prob > 35 ? '#ef4444' : '#38bdf8' }}>{n.prob}%</div>
+            
+            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '5px' }}>СРОКИ: {n.timeframe}</div>
+            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 15px 0', lineHeight: '1.4' }}>{n.detail}</p>
+            
+            {/* WHALE INDICATOR */}
+            <div style={{ background: '#0f172a', padding: '10px', borderRadius: '4px', border: '1px solid #334155' }}>
+              <div style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 'bold' }}>WHALE_WATCH: {n.trader_id}</div>
+              <div style={{ fontSize: '12px', color: n.trader_id !== 'N/A' ? '#fbbf24' : '#475569' }}>
+                СТАВКА: {n.whale_position}
+              </div>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* РАЗЪЯСНЕНИЕ ДАННЫХ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <div style={{ border: '1px solid #0f0', padding: '20px' }}>
-          <h3 style={{ marginTop: 0, color: '#0f0' }}>ЧТО ОЗНАЧАЮТ ЭТИ ЦИФРЫ?</h3>
-          <div style={{ fontSize: '12px', lineHeight: '1.6', color: '#ccc' }}>
-            <p><b>1. Проценты (%):</b> Это не прогноз погоды и не мнение одного эксперта. Это «цена предсказания» на бирже. Если стоит <b>46%</b>, значит тысячи трейдеров во всем мире ставят миллионы долларов на то, что это произойдет. Чем выше %, тем ближе реальное начало конфликта.</p>
-            <p><b>2. Уровни опасности (DEFCON):</b>
-              <br/>• <span style={{color:'#0f0'}}>Зеленый (0-25%)</span>: Обычный новостной шум.
-              <br/>• <span style={{color:'#ffaa00'}}>Оранжевый (26-40%)</span>: Реальная подготовка, стягивание сил.
-              <br/>• <span style={{color:'#f00'}}>Красный (41%+)</span>: Критическая фаза. Инсайдеры и крупные игроки уверены в ударе.
-            </p>
-            <p><b>3. Крупный игрок (GC_WHALE_01):</b> Это кошелек профессионального трейдера, который почти не ошибается (WinRate 88%). Если вы видите его подпись — значит, «умные деньги» уже вошли в сделку.</p>
+      {/* WHALE LOG & DATA EXPLANATION */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '30px' }}>
+        <div style={{ background: '#1e293b', padding: '20px', borderRadius: '8px', border: '1px solid #334155' }}>
+          <h2 style={{ fontSize: '16px', color: '#38bdf8', marginTop: 0 }}>ГЛОССАРИЙ И РАЗЪЯСНЕНИЕ ДАННЫХ</h2>
+          <div style={{ fontSize: '13px', lineHeight: '1.6', color: '#cbd5e1' }}>
+            <p>• <b>Процент (%)</b> — Это рыночная цена вероятности. Если по удару США стоит <b>14%</b>, значит рынок оценивает этот риск как умеренный на текущий момент. Резкий рост до 25%+ будет сигналом о поступлении инсайда.</p>
+            <p>• <b>Whale Position</b> — Конкретная сумма, поставленная крупнейшим игроком (китом). Мы отслеживаем <b>GC_WHALE_01</b>, так как его заходы в рынок LEB-INV на уровне 142k USD подтверждают серьезность ситуации.</p>
+            <p>• <b>Timeframe (Сроки)</b> — Каждое событие ограничено датой экспирации контракта на Polymarket. Если событие не происходит до указанной даты, вероятность обнуляется.</p>
           </div>
         </div>
 
-        <div style={{ border: '1px solid #0f0', padding: '20px', background: '#080808' }}>
-          <h3 style={{ marginTop: 0, color: '#0f0' }}>ЗАЧЕМ ЭТО НУЖНО?</h3>
-          <div style={{ fontSize: '12px', lineHeight: '1.6', color: '#ccc' }}>
-            <p>Традиционные СМИ часто опаздывают или искажают информацию. Данные рынков предсказаний (Polymarket) — это самый быстрый способ узнать правду, потому что там <b>люди отвечают за свои слова деньгами</b>.</p>
-            <p>Если вы видите резкий скачок процентов (например, с 14% до 30% за час) — это сигнал о том, что произошло важное закрытое событие, которое еще не попало в новости.</p>
+        <div style={{ background: '#1e293b', padding: '20px', borderRadius: '8px', border: '1px solid #334155' }}>
+          <h2 style={{ fontSize: '16px', color: '#38bdf8', marginTop: 0 }}>SYSTEM_STATS</h2>
+          <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+            REFRESH_RATE: 10,000ms<br/>
+            SOURCE: POLYMARKET_V2_API<br/>
+            GEO_FOCUS: MIDDLE_EAST / IRAN<br/>
+            DATE: 17.02.2026
           </div>
         </div>
       </div>
