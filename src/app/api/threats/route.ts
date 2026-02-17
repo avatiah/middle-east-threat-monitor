@@ -2,45 +2,55 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const MARKETS = [
-  { slug: "israel-strikes-iran-by-march-31-2026", id: "ISR-IRN" },
-  { slug: "us-strikes-iran-by-march-31-2026", id: "USA-IRN" },
-  { slug: "iran-strike-on-israel-by-march-31-2026", id: "IRN-ISR" },
-  { slug: "israeli-ground-operation-in-lebanon-by-march-31", id: "LEB-OPS" }
+const SENSORS = [
+  { id: "ISR-IRN", tags: ["israel", "strike", "iran"] },
+  { id: "USA-IRN", tags: ["us", "military", "iran"] },
+  { id: "IRN-ISR", tags: ["iran", "strike", "israel"] },
+  { id: "LEB-OPS", tags: ["israel", "lebanon", "ground"] }
 ];
 
 export async function GET() {
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
+
   try {
-    const data = await Promise.all(MARKETS.map(async (m) => {
-      const res = await fetch(`https://gamma-api.polymarket.com/markets?slug=${m.slug}`, {
-        cache: 'no-store',
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-      
-      const json = await res.json();
-      const market = json[0];
+    // 1. Принудительный дамп всех активных рынков (увеличиваем лимит)
+    const response = await fetch('https://gamma-api.polymarket.com/markets?active=true&limit=1000&closed=false', {
+      headers: { 'User-Agent': UA },
+      next: { revalidate: 0 }
+    });
+    
+    const allMarkets = await response.json();
 
-      if (!market) return { id: m.id, prob: 0, status: "NOT_FOUND", title: m.slug };
+    const results = SENSORS.map(sensor => {
+      // 2. Поиск по весам: ищем рынок, где максимум совпадений тегов
+      const match = allMarkets
+        .map((m: any) => ({
+          market: m,
+          score: sensor.tags.filter(t => m.question.toLowerCase().includes(t)).length
+        }))
+        .filter(m => m.score >= 2)
+        .sort((a, b) => b.score - a.score)[0]?.market;
 
-      // Извлекаем вероятность из всех возможных полей API
-      let probValue = 0;
-      if (market.outcomePrices) {
-        const prices = typeof market.outcomePrices === 'string' ? JSON.parse(market.outcomePrices) : market.outcomePrices;
-        probValue = parseFloat(prices[0]);
-      } else if (market.price) {
-        probValue = parseFloat(market.price);
-      }
+      if (!match) return { id: sensor.id, prob: 0, status: "SEARCHING", title: `NO ACTIVE DATA FOR ${sensor.id}` };
+
+      // 3. Извлечение цены из структуры 2026 года
+      let price = 0;
+      const raw = match.outcomePrices || match.price;
+      try {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        price = Array.isArray(parsed) ? parseFloat(parsed[0]) : parseFloat(parsed);
+      } catch { price = parseFloat(raw || "0"); }
 
       return {
-        id: m.id,
-        prob: Math.round(probValue * 100),
-        status: "ACTIVE",
-        title: market.question || m.slug
+        id: sensor.id,
+        prob: Math.round(price * 100),
+        status: "LIVE",
+        title: match.question.toUpperCase()
       };
-    }));
+    });
 
-    return NextResponse.json(data);
+    return NextResponse.json(results);
   } catch (e) {
-    return NextResponse.json({ error: "GATEWAY_ERROR" }, { status: 500 });
+    return NextResponse.json({ error: "DATABASE_UNREACHABLE" }, { status: 500 });
   }
 }
