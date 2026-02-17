@@ -1,62 +1,85 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
-export default function ThreatEngineV8() {
+export default function OmegaEngine() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const VERSION = "8.0-OVERRIDE";
+  const VERSION = "9.0-OMEGA";
 
-  const fetchData = async () => {
+  const sync = async () => {
     try {
       const res = await fetch('/api/threats');
       const json = await res.json();
       setData(json);
-    } catch (e) { console.error("Link unstable"); }
-    finally { setLoading(false); }
+      setLoading(false);
+    } catch (e) { console.error("LINK_ERR"); }
   };
 
   useEffect(() => {
-    fetchData();
-    const t = setInterval(fetchData, 15000);
+    sync();
+    const t = setInterval(sync, 15000);
     return () => clearInterval(t);
   }, []);
 
-  const riskIndex = data.length ? Math.round(data.reduce((a, b) => a + b.prob, 0) / data.length) : 0;
+  const activeThreats = data.filter(d => d.prob > 0);
+  const avgRisk = activeThreats.length 
+    ? Math.round(activeThreats.reduce((a, b) => a + b.prob, 0) / activeThreats.length) 
+    : 0;
 
-  if (loading) return <div style={{background:'#000',color:'#0f0',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'monospace'}}>BOOTING_V{VERSION}...</div>;
+  if (loading) return (
+    <div style={{background:'#000', color:'#0f0', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'monospace'}}>
+      [ SYSTEM_BOOT_V{VERSION} ]
+    </div>
+  );
 
   return (
-    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '20px', fontFamily: 'monospace' }}>
-      <header style={{ borderBottom: '1px solid #0f0', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '40px', fontFamily: 'monospace', boxSizing: 'border-box' }}>
+      
+      <header style={{ border: '1px solid #0f0', padding: '20px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div style={{fontSize:'10px', opacity:0.5}}>NODE_STATUS: ONLINE</div>
-          <h1 style={{margin:0, fontSize:'24px'}}>THREAT_ENGINE_V{VERSION}</h1>
+          <h1 style={{ margin: 0, fontSize: '24px', letterSpacing: '2px' }}>THREAT_ENGINE_V{VERSION}</h1>
+          <div style={{ fontSize: '10px', marginTop: '5px', opacity: 0.7 }}>CORE_STABILITY: NOMINAL // DATA_INTEGRITY: HIGH</div>
         </div>
-        <div style={{textAlign:'right'}}>
-          <div style={{fontSize:'10px'}}>GLOBAL_AGGREGATED_RISK</div>
-          <div style={{fontSize:'54px', fontWeight:'bold', lineHeight:1, color: riskIndex > 25 ? '#f00' : '#0f0'}}>{riskIndex}%</div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '10px' }}>TOTAL_RISK_INDEX</div>
+          <div style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1 }}>{avgRisk}%</div>
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '25px' }}>
         {data.map((t, i) => (
-          <div key={i} style={{ border: '1px solid #111', background: '#050505', padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <span style={{ fontSize: '10px', color: t.status === 'LIVE' ? '#0f0' : '#f00' }}>[{t.status}] {t.id}</span>
-              <span style={{ fontSize: '36px', fontWeight: 'bold', color: t.prob > 30 ? '#f00' : '#0f0' }}>{t.prob}%</span>
+          <div key={i} style={{ border: '1px solid #111', background: '#050505', padding: '25px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '2px', background: t.prob > 0 ? '#0f0' : '#200' }} />
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <span style={{ fontSize: '10px', color: t.prob > 0 ? '#0f0' : '#400' }}>
+                [{t.status}] {t.id}
+              </span>
+              <span style={{ fontSize: '42px', fontWeight: 'bold', color: t.prob > 30 ? '#f00' : (t.prob > 0 ? '#0f0' : '#222') }}>
+                {t.prob > 0 ? `${t.prob}%` : '--'}
+              </span>
             </div>
-            <div style={{ fontSize: '12px', height: '40px', color: '#888', textTransform: 'uppercase', marginBottom: '15px' }}>{t.title}</div>
-            <div style={{ height: '2px', background: '#111' }}>
-              <div style={{ height: '100%', width: `${t.prob}%`, background: t.prob > 30 ? '#f00' : '#0f0', boxShadow: t.prob > 30 ? '0 0 10px #f00' : 'none' }} />
+
+            <div style={{ fontSize: '12px', height: '40px', color: t.prob > 0 ? '#ccc' : '#333', textTransform: 'uppercase', marginBottom: '20px' }}>
+              {t.title}
+            </div>
+
+            <div style={{ height: '3px', background: '#111', width: '100%' }}>
+              <div style={{ 
+                height: '100%', 
+                width: `${t.prob}%`, 
+                background: t.prob > 35 ? '#f00' : '#0f0',
+                boxShadow: t.prob > 35 ? '0 0 15px #f00' : 'none',
+                transition: 'width 2s cubic-bezier(0.1, 0, 0.45, 1)'
+              }} />
             </div>
           </div>
         ))}
       </div>
 
-      <div style={{ marginTop: '40px', padding: '15px', border: '1px solid #002200', background: '#020202', fontSize: '10px', color: '#006600' }}>
-        [DEBUG_LOG]: {new Date().toISOString()} - INCOMING_STREAM_DECRYPTED...<br/>
-        [SENSORS]: {data.filter(d => d.status === 'LIVE').length}/{data.length} ACTIVE_NODES_FOUND
-      </div>
+      <footer style={{ marginTop: '50px', fontSize: '10px', borderTop: '1px solid #111', paddingTop: '20px', opacity: 0.4 }}>
+        SYSTEM_TIME: {new Date().toISOString()} // ALL_NODES_REPORTING
+      </footer>
     </div>
   );
 }
