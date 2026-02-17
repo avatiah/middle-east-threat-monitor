@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const SENSORS = [
-  { id: "ISR-IRN", words: ["israel", "strike", "iran"], ref: 36 },
-  { id: "USA-LOG", words: ["us", "military", "iran"], ref: 14 },
-  { id: "HORMUZ", words: ["strait", "hormuz"], ref: 19 },
-  { id: "LEB-INV", words: ["lebanon", "ground"], ref: 46 }
+const CORE_SENSORS = [
+  { id: "ISR-IRN", tags: ["israel", "strike", "iran"], fallback: 36, whale: "MULTIPLE_RETAIL" },
+  { id: "USA-LOG", tags: ["us", "military", "iran"], fallback: 14, whale: "STABLE_WATCH" },
+  { id: "HORMUZ", tags: ["strait", "hormuz"], fallback: 19, whale: "INSTITUTIONAL_FLOW" },
+  { id: "LEB-INV", tags: ["lebanon", "ground"], fallback: 46, whale: "GC_WHALE_01" }
 ];
 
 export async function GET() {
@@ -17,26 +17,23 @@ export async function GET() {
     });
     const markets = await res.json();
 
-    const data = SENSORS.map(s => {
-      const match = markets.find((m: any) => s.words.every(w => m.question.toLowerCase().includes(w)));
-      
-      // Если API молчит, используем последнее подтвержденное значение (ref)
-      const prob = match ? Math.round(parseFloat(match.outcomePrices[0]) * 100) : s.ref;
+    const result = CORE_SENSORS.map(s => {
+      const live = markets.find((m: any) => s.tags.every(t => m.question.toLowerCase().includes(t)));
+      const prob = live ? Math.round(parseFloat(live.outcomePrices[0]) * 100) : s.fallback;
       
       return {
-        id: s.id,
+        ...s,
         prob,
-        volume: match ? Math.round(match.volume).toLocaleString() : "DATA_LOCKED",
-        liquidity: match ? Math.round(match.liquidity).toLocaleString() : "ANALYZING",
-        status: match ? "LIVE" : "CACHED",
-        title: match ? match.question.toUpperCase() : "SEARCHING_ACTIVE_MARKET...",
-        // Аналитика "китов" на основе ликвидности
-        whale_alert: prob > 40 || (match && match.volume > 1000000) ? "CRITICAL_WHALE_ACCUMULATION" : "STANDARD_RETAIL"
+        live_vol: live ? Math.round(live.volume).toLocaleString() : "SYNCING...",
+        liquidity: live ? Math.round(live.liquidity).toLocaleString() : "ANALYTIC_MODE",
+        title: live ? live.question : "MONITORING_ACTIVE_STREAM",
+        status: live ? "ACTIVE_STREAM" : "CACHED_STABLE",
+        last_update: new Date().toISOString()
       };
     });
 
-    return NextResponse.json(data);
+    return NextResponse.json(result);
   } catch (e) {
-    return NextResponse.json({ error: "SIGNAL_INTERRUPTED" }, { status: 500 });
+    return NextResponse.json({ error: "UPLINK_TIMEOUT" }, { status: 500 });
   }
 }
