@@ -3,21 +3,18 @@ import React, { useEffect, useState, useRef } from 'react';
 
 export default function IntelligenceOS() {
   const [data, setData] = useState<any[]>([]);
-  const lastData = useRef<any[]>([]); // Храним данные для защиты от сбоев
+  const lastData = useRef<any[]>([]);
 
   const sync = async () => {
     try {
       const res = await fetch('/api/threats');
       const json = await res.json();
-      
-      // Логика сохранения данных: если пришел null, берем из памяти
       const stableData = json.map((node: any, i: number) => {
         if (node.prob === null && lastData.current[i]) {
           return { ...lastData.current[i], status: 'STALE' };
         }
         return node;
       });
-
       setData(stableData);
       lastData.current = stableData;
     } catch (e) { console.warn("SYNC_LOCKED"); }
@@ -26,56 +23,81 @@ export default function IntelligenceOS() {
   useEffect(() => { sync(); const i = setInterval(sync, 10000); return () => clearInterval(i); }, []);
 
   const getDefcon = (p: number) => {
-    if (p > 40) return { label: 'DEFCON 2', color: '#ff0000' };
-    if (p > 25) return { label: 'DEFCON 3', color: '#ffaa00' };
-    return { label: 'DEFCON 4', color: '#0f0' };
+    if (p > 40) return { label: 'DEFCON 2', color: '#ff0000', context: 'КРИТИЧЕСКАЯ УГРОЗА: Немедленная готовность' };
+    if (p > 25) return { label: 'DEFCON 3', color: '#ffaa00', context: 'ВЫСОКИЙ РИСК: Повышенная боеготовность' };
+    return { label: 'DEFCON 4', color: '#0f0', context: 'УМЕРЕННЫЙ РИСК: Стандартный мониторинг' };
   };
 
+  const avgRisk = data.length ? Math.round(data.reduce((a, b) => a + (b.prob || 0), 0) / data.length) : 0;
+
   return (
-    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '40px', fontFamily: 'monospace' }}>
+    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '30px', fontFamily: 'monospace' }}>
       
-      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #0f0', paddingBottom: '20px', marginBottom: '40px' }}>
+      {/* HEADER SECTION */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', border: '1px solid #0f0', padding: '20px', marginBottom: '30px' }}>
         <div>
-          <div style={{ fontSize: '32px', fontWeight: 'bold' }}>STRATEGIC_INTELLIGENCE_OS</div>
-          <div style={{ fontSize: '10px', opacity: 0.5 }}>DATA_SOURCE: POLYMARKET_LIVE_NODES // ADAPTIVE_MONITORING_ACTIVE</div>
+          <div style={{ fontSize: '28px', fontWeight: 'bold' }}>STRATEGIC_INTELLIGENCE_OS</div>
+          <div style={{ fontSize: '10px', opacity: 0.6 }}>CORE_V20_SYNTHETIC // SOURCE: POLYMARKET_NODES</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '10px' }}>SYSTEM_STATUS</div>
-          <div style={{ color: '#0f0' }}>● SIGNAL_STABLE</div>
+          <div style={{ fontSize: '10px' }}>AGGREGATED_RISK</div>
+          <div style={{ fontSize: '36px', fontWeight: 'bold', color: avgRisk > 30 ? '#f00' : '#0f0' }}>{avgRisk}%</div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2px', background: '#0f0', border: '1px solid #0f0' }}>
+      {/* MONITORING GRID */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' }}>
         {data.map((n, i) => {
           const state = getDefcon(n.prob || 0);
           return (
-            <div key={i} style={{ background: '#000', padding: '30px', position: 'relative' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', color: n.status === 'STALE' ? '#555' : '#0f0' }}>
-                  [{n.id}] {n.status === 'STALE' ? ' (CACHED)' : ''}
-                </div>
-                <div style={{ background: state.color, color: '#000', fontSize: '10px', padding: '2px 6px', fontWeight: 'bold' }}>
-                  {state.label}
-                </div>
+            <div key={i} style={{ border: '1px solid #333', padding: '20px', background: '#050505' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>[{n.id}]</span>
+                <span style={{ fontSize: '10px', background: state.color, color: '#000', padding: '1px 5px' }}>{state.label}</span>
               </div>
-
-              <div style={{ fontSize: '64px', fontWeight: 'bold', margin: '20px 0', color: state.color }}>
+              <div style={{ fontSize: '48px', fontWeight: 'bold', color: state.color, margin: '15px 0' }}>
                 {n.prob !== null ? `${n.prob}%` : '---'}
               </div>
-
-              <div style={{ fontSize: '14px', color: '#fff', marginBottom: '10px' }}>{n.desc}</div>
-              <div style={{ fontSize: '9px', color: '#444', height: '30px', overflow: 'hidden' }}>{n.title}</div>
-
-              <div style={{ height: '4px', background: '#111', marginTop: '20px' }}>
-                <div style={{ height: '100%', width: `${n.prob}%`, background: state.color, boxShadow: `0 0 15px ${state.color}` }} />
+              <div style={{ height: '2px', background: '#222' }}>
+                <div style={{ height: '100%', width: `${n.prob}%`, background: state.color, boxShadow: `0 0 10px ${state.color}` }} />
               </div>
             </div>
           );
         })}
       </div>
 
-      <div style={{ marginTop: '40px', fontSize: '10px', color: '#222' }}>
-        LOG: {new Date().toISOString()} // THREAT_LEVEL_CALCULATED_BY_MARKET_SENTIMENT
+      {/* DECODING TABLE (НОВЫЙ БЛОК) */}
+      <div style={{ border: '1px solid #0f0', padding: '20px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>
+          SIGNAL_DECODING_REPORT // РАСШИФРОВКА ТЕКУЩИХ ДАННЫХ
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+          <thead>
+            <tr style={{ textAlign: 'left', opacity: 0.6 }}>
+              <th style={{ padding: '10px', borderBottom: '1px solid #333' }}>ID</th>
+              <th style={{ padding: '10px', borderBottom: '1px solid #333' }}>ИНТЕРПРЕТАЦИЯ</th>
+              <th style={{ padding: '10px', borderBottom: '1px solid #333' }}>ВОЕННЫЙ КОНТЕКСТ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((n, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid #111' }}>
+                <td style={{ padding: '12px', fontWeight: 'bold', color: getDefcon(n.prob || 0).color }}>{n.id}</td>
+                <td style={{ padding: '12px' }}>{getDefcon(n.prob || 0).context}</td>
+                <td style={{ padding: '12px', color: '#ccc' }}>
+                  {n.id === 'LEB-INV' && 'Вероятность начала масштабной наземной операции. Порог 45%+ критичен.'}
+                  {n.id === 'ISR-IRN' && 'Прямая эскалация между государствами. Текущий уровень требует внимания.'}
+                  {n.id === 'HORMUZ' && 'Риск блокировки транспортных артерий. Прямое влияние на нефть.'}
+                  {n.id === 'USA-LOG' && 'Степень прямого участия ВС США в кинетических действиях.'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ marginTop: '20px', fontSize: '10px', opacity: 0.3 }}>
+        LOG: {new Date().toISOString()} // ALL_SIGNALS_DECODED_STABLE
       </div>
     </div>
   );
