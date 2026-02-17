@@ -1,84 +1,65 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
-export default function OmegaEngine() {
-  const [data, setData] = useState<any[]>([]);
+export default function ThreatEngineV10() {
+  const [threats, setThreats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const VERSION = "9.0-OMEGA";
+  const VERSION = "10.0-PRO";
 
   const sync = async () => {
     try {
       const res = await fetch('/api/threats');
-      const json = await res.json();
-      setData(json);
-      setLoading(false);
-    } catch (e) { console.error("LINK_ERR"); }
+      const data = await res.json();
+      if (Array.isArray(data)) setThreats(data);
+    } catch (e) { console.error("Signal Lost"); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
     sync();
-    const t = setInterval(sync, 15000);
-    return () => clearInterval(t);
+    const interval = setInterval(sync, 10000); // 10 сек для оперативного анализа
+    return () => clearInterval(interval);
   }, []);
 
-  const activeThreats = data.filter(d => d.prob > 0);
-  const avgRisk = activeThreats.length 
-    ? Math.round(activeThreats.reduce((a, b) => a + b.prob, 0) / activeThreats.length) 
+  const globalRisk = threats.filter(t => t.prob > 0).length 
+    ? Math.round(threats.reduce((a, b) => a + (b.prob || 0), 0) / threats.filter(t => t.prob > 0).length) 
     : 0;
 
-  if (loading) return (
-    <div style={{background:'#000', color:'#0f0', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'monospace'}}>
-      [ SYSTEM_BOOT_V{VERSION} ]
-    </div>
-  );
+  if (loading) return <div style={{background:'#000', color:'#0f0', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'monospace'}}>CONNECTING_TO_GLOBAL_FEED_V{VERSION}...</div>;
 
   return (
-    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '40px', fontFamily: 'monospace', boxSizing: 'border-box' }}>
+    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '30px', fontFamily: 'monospace' }}>
       
-      <header style={{ border: '1px solid #0f0', padding: '20px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ border: '1px solid #0f0', padding: '15px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '24px', letterSpacing: '2px' }}>THREAT_ENGINE_V{VERSION}</h1>
-          <div style={{ fontSize: '10px', marginTop: '5px', opacity: 0.7 }}>CORE_STABILITY: NOMINAL // DATA_INTEGRITY: HIGH</div>
+          <span style={{fontSize:'10px'}}>STREAMS: {threats.filter(t=>t.status==='LIVE').length}/4 ACTIVE</span><br/>
+          <strong>THREAT_ENGINE_V{VERSION}</strong>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '10px' }}>TOTAL_RISK_INDEX</div>
-          <div style={{ fontSize: '64px', fontWeight: 'bold', lineHeight: 1 }}>{avgRisk}%</div>
+        <div style={{textAlign: 'right'}}>
+          <span style={{fontSize:'10px'}}>TOTAL_AGGREGATED_RISK</span>
+          <div style={{fontSize: '42px', fontWeight: 'bold', color: globalRisk > 30 ? '#f00' : '#0f0'}}>{globalRisk}%</div>
         </div>
-      </header>
+      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '25px' }}>
-        {data.map((t, i) => (
-          <div key={i} style={{ border: '1px solid #111', background: '#050505', padding: '25px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '2px', background: t.prob > 0 ? '#0f0' : '#200' }} />
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <span style={{ fontSize: '10px', color: t.prob > 0 ? '#0f0' : '#400' }}>
-                [{t.status}] {t.id}
-              </span>
-              <span style={{ fontSize: '42px', fontWeight: 'bold', color: t.prob > 30 ? '#f00' : (t.prob > 0 ? '#0f0' : '#222') }}>
-                {t.prob > 0 ? `${t.prob}%` : '--'}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+        {threats.map((t, i) => (
+          <div key={i} style={{ border: '1px solid #111', background: '#050505', padding: '20px', borderLeft: `2px solid ${t.prob > 0 ? (t.prob > 35 ? '#f00' : '#0f0') : '#222'}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+              <span style={{ fontSize: '10px', color: t.prob > 0 ? '#0f0' : '#444' }}>[{t.status}] {t.id}</span>
+              <span style={{ fontSize: '32px', fontWeight: 'bold', color: t.prob > 35 ? '#f00' : (t.prob > 0 ? '#0f0' : '#222') }}>
+                {t.prob > 0 ? `${t.prob}%` : '---'}
               </span>
             </div>
-
-            <div style={{ fontSize: '12px', height: '40px', color: t.prob > 0 ? '#ccc' : '#333', textTransform: 'uppercase', marginBottom: '20px' }}>
-              {t.title}
-            </div>
-
-            <div style={{ height: '3px', background: '#111', width: '100%' }}>
-              <div style={{ 
-                height: '100%', 
-                width: `${t.prob}%`, 
-                background: t.prob > 35 ? '#f00' : '#0f0',
-                boxShadow: t.prob > 35 ? '0 0 15px #f00' : 'none',
-                transition: 'width 2s cubic-bezier(0.1, 0, 0.45, 1)'
-              }} />
+            <div style={{ fontSize: '11px', height: '45px', color: t.prob > 0 ? '#aaa' : '#333', marginBottom: '15px' }}>{t.title}</div>
+            <div style={{ height: '2px', background: '#111' }}>
+              <div style={{ height: '100%', width: `${t.prob}%`, background: t.prob > 35 ? '#f00' : '#0f0', transition: 'width 1s ease' }} />
             </div>
           </div>
         ))}
       </div>
 
-      <footer style={{ marginTop: '50px', fontSize: '10px', borderTop: '1px solid #111', paddingTop: '20px', opacity: 0.4 }}>
-        SYSTEM_TIME: {new Date().toISOString()} // ALL_NODES_REPORTING
+      <footer style={{marginTop:'50px', fontSize:'9px', opacity:0.4, textAlign:'center'}}>
+        [SYSTEM_STABLE] // DATA_REFRESH_RATE: 10s // SOURCE: POLYMARKET_NODES_v2026
       </footer>
     </div>
   );
