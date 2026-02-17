@@ -2,57 +2,47 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const SEARCH_CONFIG = [
-  { id: "ISR-IRN", q: "Israel strikes Iran", slug: "israel-strikes-iran-by-march-31-2026" },
-  { id: "USA-IRN", q: "US strikes Iran", slug: "us-strikes-iran-by-march-31-2026" },
-  { id: "IRN-ISR", q: "Iran strike on Israel", slug: "iran-strike-on-israel-by-march-31-2026" },
-  { id: "LEB-OPS", q: "Israel ground operation Lebanon", slug: "israeli-ground-operation-in-lebanon-by-march-31" }
+const THREAT_SENSORS = [
+  { id: "ISR-IRN", keywords: ["Israel", "Iran", "strike"], fallback: "israel-strikes-iran-by-march-31-2026" },
+  { id: "USA-IRN", keywords: ["US", "Iran", "strike"], fallback: "us-strikes-iran-by-march-31-2026" },
+  { id: "IRN-ISR", keywords: ["Iran", "strike", "Israel"], fallback: "iran-strike-on-israel-by-march-31-2026" },
+  { id: "LEB-OPS", keywords: ["Israel", "Lebanon", "ground"], fallback: "israeli-ground-operation-in-lebanon-by-march-31" }
 ];
 
-async function getMarketData(item: typeof SEARCH_CONFIG[0]) {
+export async function GET() {
   const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-  
+
   try {
-    // ШАГ 1: Пробуем прямой Slug
-    let res = await fetch(`https://gamma-api.polymarket.com/markets?slug=${item.slug}`, {
+    // Получаем ВСЕ активные рынки одним запросом (лимит 100 для скорости)
+    const res = await fetch(`https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=100`, {
       headers: { 'User-Agent': ua },
       cache: 'no-store'
     });
-    let data = await res.json();
+    const allMarkets = await res.json();
 
-    // ШАГ 2: Если пусто, ищем через глобальный поиск по активным рынкам
-    if (!data || data.length === 0) {
-      res = await fetch(`https://gamma-api.polymarket.com/search?q=${encodeURIComponent(item.q)}&active=true`, {
-        headers: { 'User-Agent': ua },
-        cache: 'no-store'
-      });
-      data = await res.json();
-    }
+    const results = THREAT_SENSORS.map(sensor => {
+      // Ищем рынок, в вопросе которого есть ВСЕ ключевые слова
+      const found = allMarkets.find((m: any) => 
+        sensor.keywords.every(k => m.question.toLowerCase().includes(k.toLowerCase()))
+      );
 
-    const market = data[0];
-    if (!market) return { id: item.id, prob: 0, status: "OFFLINE", title: `SEARCH_FAILED: ${item.id}` };
+      if (!found) return { id: sensor.id, prob: 0, status: "SCAN_FAIL", title: `SEARCHING: ${sensor.keywords.join('+')}` };
 
-    // Универсальный парсинг цены (учитываем все форматы 2026 года)
-    let priceRaw = market.outcomePrices || market.price;
-    if (typeof priceRaw === 'string') {
-        try { priceRaw = JSON.parse(priceRaw); } catch { /* ignore */ }
-    }
-    
-    const finalPrice = Array.isArray(priceRaw) ? priceRaw[0] : priceRaw;
-    const probability = Math.round(parseFloat(finalPrice) * 100);
+      // Парсинг цены
+      let p = found.outcomePrices || found.price;
+      if (typeof p === 'string') try { p = JSON.parse(p); } catch { p = [0]; }
+      const prob = Math.round(parseFloat(Array.isArray(p) ? p[0] : p) * 100);
 
-    return {
-      id: item.id,
-      prob: isNaN(probability) ? 0 : probability,
-      status: "ACTIVE",
-      title: market.question || item.q
-    };
+      return {
+        id: sensor.id,
+        prob: isNaN(prob) ? 0 : prob,
+        status: "LIVE",
+        title: found.question
+      };
+    });
+
+    return NextResponse.json(results);
   } catch (e) {
-    return { id: item.id, prob: 0, status: "ERROR", title: "CONNECTION_FAILURE" };
+    return NextResponse.json({ error: "UPLINK_CRITICAL_FAILURE" }, { status: 500 });
   }
-}
-
-export async function GET() {
-  const results = await Promise.all(SEARCH_CONFIG.map(getMarketData));
-  return NextResponse.json(results);
 }
