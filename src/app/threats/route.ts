@@ -1,59 +1,54 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
-const SENSORS = [
-  { id: "ISR-IRN", tags: ["israel", "strike", "iran"] },
-  { id: "USA-IRN", tags: ["us", "military", "iran"] },
-  { id: "IRN-ISR", tags: ["iran", "strike", "israel"] },
-  { id: "LEB-OPS", tags: ["israel", "lebanon", "ground"] }
+// Используем массив ключевых слов для каждого сектора
+const CONFIG = [
+  { id: "ISR-IRN", terms: ["israel", "iran", "strike"] },
+  { id: "USA-IRN", terms: ["us", "military", "iran"] },
+  { id: "IRN-ISR", terms: ["iran", "attack", "israel"] },
+  { id: "LEB-OPS", terms: ["lebanon", "israel", "ground"] }
 ];
 
 export async function GET() {
-  const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
-
   try {
-    // Получаем широкий пласт рынков, чтобы найти скрытые события
-    const response = await fetch(`https://gamma-api.polymarket.com/markets?active=true&limit=500&closed=false`, {
-      headers: { 'User-Agent': ua },
+    // Шаг 1: Запрашиваем ВСЕ активные рынки в категории Политика/Геополитика
+    const res = await fetch(`https://gamma-api.polymarket.com/markets?active=true&limit=100&closed=false`, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
       cache: 'no-store'
     });
-    
-    if (!response.ok) throw new Error('Uplink Blocked');
-    const allMarkets = await response.json();
+    const markets = await res.json();
 
-    const results = SENSORS.map(sensor => {
-      // Алгоритм поиска по весам тегов
-      const matches = allMarkets.filter((m: any) => {
-        const q = m.question.toLowerCase();
-        return sensor.tags.filter(tag => q.includes(tag)).length >= 2;
-      });
+    const data = CONFIG.map(sensor => {
+      // Шаг 2: Ищем наиболее подходящий рынок по совпадению ключевых слов
+      const match = markets.find((m: any) => 
+        sensor.terms.every(term => m.question.toLowerCase().includes(term))
+      );
 
-      // Сортируем по релевантности (самый свежий/активный)
-      const bestMatch = matches.sort((a: any, b: any) => (b.volume || 0) - (a.volume || 0))[0];
-
-      if (!bestMatch) return { id: sensor.id, prob: 0, status: "SCANNING", title: `SEARCHING FOR ${sensor.id}...` };
-
-      let rawPrice = bestMatch.outcomePrices || bestMatch.price;
-      if (typeof rawPrice === 'string' && rawPrice.startsWith('[')) {
-        rawPrice = JSON.parse(rawPrice)[0];
-      } else if (Array.isArray(rawPrice)) {
-        rawPrice = rawPrice[0];
+      if (!match) {
+        return { 
+          id: sensor.id, 
+          prob: 0, 
+          status: "STANDBY", 
+          title: `SCANNING FOR ACTIVE ${sensor.id} MARKET...` 
+        };
       }
 
-      const probability = Math.round(parseFloat(rawPrice as string) * 100);
+      // Шаг 3: Универсальный парсинг цены (учитываем изменения API 2026)
+      let price = match.outcomePrices || match.price;
+      if (typeof price === 'string' && price.startsWith('[')) price = JSON.parse(price);
+      const val = Array.isArray(price) ? parseFloat(price[0]) : parseFloat(price);
 
       return {
         id: sensor.id,
-        prob: isNaN(probability) ? 0 : probability,
+        prob: Math.round(val * 100) || 0,
         status: "LIVE",
-        title: bestMatch.question.toUpperCase()
+        title: match.question.toUpperCase()
       };
     });
 
-    return NextResponse.json(results);
+    return NextResponse.json(data);
   } catch (e) {
-    return NextResponse.json({ error: "GATEWAY_TIMEOUT" }, { status: 504 });
+    return NextResponse.json({ error: "API_OFFLINE" }, { status: 500 });
   }
 }
