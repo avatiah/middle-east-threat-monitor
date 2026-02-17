@@ -4,46 +4,42 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // Прямой запрос к API Polymarket без промежуточного кэша
+    // Таймаут 4 секунды, чтобы API не висело вечно
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 4000);
+
     const res = await fetch('https://gamma-api.polymarket.com/markets?active=true&limit=100', {
       method: 'GET',
-      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+      headers: { 'Cache-Control': 'no-cache' },
+      signal: controller.signal
     });
+    clearTimeout(id);
     
     const markets = await res.json();
     
-    const findProb = (tags: string[]) => {
-      const match = markets.find((m: any) => tags.every(t => m.question.toLowerCase().includes(t)));
-      return match ? Math.round(parseFloat(match.outcomePrices[0]) * 100) : null;
-    };
+    const sensors = [
+      { id: "ISR-IRN", tags: ["israel", "strike", "iran"] },
+      { id: "USA-STRIKE", tags: ["us", "strikes", "iran"] },
+      { id: "HORMUZ", tags: ["strait", "hormuz"] },
+      { id: "LEB-INV", tags: ["lebanon", "ground"] }
+    ];
 
-    const getDeadline = (tags: string[]) => {
-      const match = markets.find((m: any) => tags.every(t => m.question.toLowerCase().includes(t)));
-      return match ? new Date(match.endDate).toLocaleDateString('ru-RU') : "DATA_STREAM_ERROR";
-    };
-
-    const nodes = [
-      { id: "ISR-IRN", tags: ["israel", "strike", "iran"], detail: "Удар Израиля по Ирану." },
-      { id: "USA-STRIKE", tags: ["us", "strikes", "iran"], detail: "Удар США по объектам Ирана." },
-      { id: "HORMUZ", tags: ["strait", "hormuz"], detail: "Закрытие Ормузского пролива." },
-      { id: "LEB-INV", tags: ["lebanon", "ground"], detail: "Наземная операция в Ливане." }
-    ].map(node => {
-      const prob = findProb(node.tags);
-      if (prob === null) throw new Error(`STALE_DATA_DETECTED_${node.id}`);
+    const data = sensors.map(s => {
+      const match = markets.find((m: any) => s.tags.every(t => m.question.toLowerCase().includes(t)));
       
       return {
-        ...node,
-        prob,
-        timeframe: getDeadline(node.tags),
-        // Прямое извлечение объема и ликвидности для детекции реальных ставок
-        volume: markets.find((m: any) => node.tags.every(t => m.question.toLowerCase().includes(t)))?.volume || 0,
-        status: "LIVE_DATA_FEED"
+        id: s.id,
+        // Если данных нет в эфире, возвращаем 0 и статус OFFLINE, но не валим систему
+        prob: match ? Math.round(parseFloat(match.outcomePrices[0]) * 100) : 0,
+        timeframe: match ? new Date(match.endDate).toLocaleDateString('ru-RU') : "N/A",
+        volume: match ? match.volume : 0,
+        status: match ? "LIVE" : "OFFLINE"
       };
     });
 
-    return NextResponse.json(nodes);
+    return NextResponse.json(data);
   } catch (e) {
-    // Если данные не обновились или API не отвечает - возвращаем статус ошибки, а не старые %
-    return NextResponse.json({ error: "CRITICAL_SYNC_FAILURE", detail: "Real-time data stream interrupted" }, { status: 503 });
+    // Возвращаем пустой массив, чтобы фронтенд знал, что связи нет
+    return NextResponse.json([], { status: 503 });
   }
 }
