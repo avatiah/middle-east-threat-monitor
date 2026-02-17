@@ -1,66 +1,91 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
-export default function GlobalIntelV27() {
+export default function PolymarketStyleOS() {
   const [nodes, setNodes] = useState<any[]>([]);
-  const [syncTime, setSyncTime] = useState("");
+  const [now, setNow] = useState(Date.now());
 
   const sync = async () => {
-    try {
-      const res = await fetch('/api/threats');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setNodes(data);
-        setSyncTime(new Date().toLocaleTimeString());
-      }
-    } catch (e) { console.error("SYNC_ERROR"); }
+    const res = await fetch('/api/threats');
+    const data = await res.json();
+    if (Array.isArray(data)) setNodes(data);
   };
 
-  useEffect(() => { sync(); const i = setInterval(sync, 5000); return () => clearInterval(i); }, []);
+  useEffect(() => { 
+    sync(); 
+    const i = setInterval(sync, 2000); 
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => { clearInterval(i); clearInterval(t); };
+  }, []);
 
   return (
-    <div style={{ background: '#f8fafc', color: '#1e293b', minHeight: '100vh', padding: '30px', fontFamily: 'monospace' }}>
+    <div style={{ background: '#f3f4f6', minHeight: '100vh', padding: '20px', fontFamily: 'system-ui, sans-serif' }}>
       
-      {/* HEADER */}
-      <div style={{ borderBottom: '3px solid #3b82f6', paddingBottom: '15px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between' }}>
-        <h1 style={{ margin: 0 }}>STRATEGIC_INTEL_OS // V27.0</h1>
-        <div style={{ textAlign: 'right', fontWeight: 'bold', color: '#3b82f6' }}>SYNC_ACTIVE: {syncTime}</div>
+      {/* NAVBAR STYLE */}
+      <div style={{ background: '#fff', padding: '15px 30px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '30px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '32px', height: '32px', background: '#2563eb', borderRadius: '50%' }}></div>
+          <b style={{ fontSize: '20px', color: '#0f172a' }}>ThreatMarket <span style={{color: '#64748b', fontWeight: 'normal'}}>V28.0</span></b>
+        </div>
+        <div style={{ fontSize: '12px', color: '#10b981', fontWeight: 'bold' }}>● LIVE_DATA_STREAM</div>
       </div>
 
-      {/* SENSORS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
+      {/* NODES GRID */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
         {nodes.map((n, i) => (
-          <div key={i} style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold' }}>ID: {n.id} [{n.status}]</div>
-            <div style={{ fontSize: '64px', fontWeight: '800', margin: '15px 0', color: n.prob > 40 ? '#ef4444' : '#3b82f6' }}>{n.prob}%</div>
-            <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>СРОКИ: {n.timeframe}</div>
-            <p style={{ fontSize: '12px', color: '#475569', height: '40px', overflow: 'hidden' }}>{n.detail}</p>
-            <div style={{ background: '#f1f5f9', padding: '10px', borderRadius: '6px', fontSize: '11px', marginTop: '10px' }}>
-              <b>WHALE_WATCH:</b> <span style={{color: n.whale_bet !== 'N/A' ? '#f59e0b' : '#64748b'}}>{n.whale_bet}</span>
+          <div key={i} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '20px', transition: 'transform 0.2s' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>{n.id}</span>
+              <span style={{ fontSize: '11px', color: '#3b82f6', background: '#eff6ff', padding: '2px 8px', borderRadius: '10px' }}>
+                Обновлено: {Math.floor((now - n.updated_at) / 1000)} сек. назад
+              </span>
+            </div>
+            
+            <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#0f172a', marginBottom: '10px' }}>{n.prob}%</div>
+            
+            <div style={{ fontSize: '13px', color: '#475569', marginBottom: '20px', height: '32px' }}>{n.detail}</div>
+            
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
+              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '5px' }}>ТОП-ТРЕЙДЕР:</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <b style={{ fontSize: '13px', color: '#2563eb' }}>{n.top_trader.name}</b>
+                <span style={{ fontSize: '12px', color: '#10b981', fontWeight: 'bold' }}>WinRate: {n.top_trader.win_rate}%</span>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* EXPLANATIONS */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px' }}>
-        <div style={{ background: '#fff', padding: '25px', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
-          <h2 style={{ marginTop: 0, fontSize: '18px', color: '#3b82f6' }}>РУКОВОДСТВО ПО ИНТЕРПРЕТАЦИИ</h2>
-          <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
-            <p>• <b>Процент (%)</b>: Это рыночная вероятность. 46% на узле LEB-INV означает, что почти половина участников рынка уверена в начале операции в указанные сроки.</p>
-            <p>• <b>Whale Position</b>: Мы отслеживаем <b>GC_WHALE_01</b>. Его ставка в <b>$142,000</b> — это сигнал «умных денег», которые заходят в рынок только при наличии веских оснований.</p>
-            <p>• <b>Сроки</b>: У каждого события есть дедлайн. Если оно не происходит до этой даты, вероятность падает до нуля.</p>
-          </div>
-        </div>
-        <div style={{ background: '#1e293b', color: '#fff', padding: '25px', borderRadius: '12px' }}>
-          <h2 style={{ marginTop: 0, fontSize: '18px', color: '#3b82f6' }}>SYSTEM_LOG</h2>
-          <pre style={{ fontSize: '10px', color: '#94a3b8' }}>
-            [16:10:06] CONNECTING TO POLYMARKET...<br/>
-            [16:10:07] UPLINK_STABLE // NO_DATA_LOSS<br/>
-            [16:10:08] MONITORING: {nodes.length} SENSORS<br/>
-            [16:10:09] WHALE_TRACKER: ACTIVE
-          </pre>
-        </div>
+      {/* TOP TRADERS PROFILE TABLE */}
+      <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e5e7eb', padding: '25px' }}>
+        <h2 style={{ marginTop: 0, fontSize: '18px', marginBottom: '20px' }}>Elite Forecasters // Точность прогнозов</h2>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ textAlign: 'left', borderBottom: '2px solid #f3f4f6', color: '#64748b', fontSize: '13px' }}>
+              <th style={{ padding: '10px' }}>ТРЕЙДЕР</th>
+              <th style={{ padding: '10px' }}>ИСТОРИЧЕСКАЯ ТОЧНОСТЬ</th>
+              <th style={{ padding: '10px' }}>ПРОФИТ</th>
+              <th style={{ padding: '10px' }}>СПЕЦИАЛИЗАЦИЯ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {nodes.slice(0, 2).map((n, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid #f3f4f6', fontSize: '14px' }}>
+                <td style={{ padding: '15px' }}><b style={{ color: '#2563eb' }}>{n.top_trader.name}</b></td>
+                <td style={{ padding: '15px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '100px', height: '6px', background: '#f3f4f6', borderRadius: '3px' }}>
+                      <div style={{ width: `${n.top_trader.win_rate}%`, height: '100%', background: '#10b981', borderRadius: '3px' }}></div>
+                    </div>
+                    <b>{n.top_trader.win_rate}%</b>
+                  </div>
+                </td>
+                <td style={{ padding: '15px', color: '#10b981' }}>{n.top_trader.total_profit}</td>
+                <td style={{ padding: '15px', color: '#64748b' }}>{n.top_trader.history}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
