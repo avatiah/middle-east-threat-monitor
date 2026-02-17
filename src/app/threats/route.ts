@@ -1,42 +1,58 @@
 import { NextResponse } from 'next/server';
 
-export const revalidate = 30; // Кэш на 30 секунд
+export const dynamic = 'force-dynamic';
 
-const MARKETS = [
-  { slug: "israel-strikes-iran-by-march-31-2026", id: "ISR-IRN" },
-  { slug: "us-strikes-iran-by-march-31-2026", id: "USA-IRN" },
-  { slug: "iran-strike-on-israel-by-march-31-2026", id: "IRN-ISR" },
-  { slug: "israeli-ground-operation-in-lebanon-by-march-31", id: "LEB-OPS" }
+// Конфигурация поиска для максимального покрытия
+const SEARCH_QUERIES = [
+  { id: "ISR-IRN", term: "Israel strikes Iran", backupSlug: "israel-strikes-iran-by-march-31-2026" },
+  { id: "USA-IRN", term: "US strikes Iran", backupSlug: "us-strikes-iran-by-march-31-2026" },
+  { id: "IRN-ISR", term: "Iran strike on Israel", backupSlug: "iran-strike-on-israel-by-march-31-2026" },
+  { id: "LEB-OPS", term: "Israeli ground operation Lebanon", backupSlug: "israeli-ground-operation-in-lebanon-by-march-31" }
 ];
 
-export async function GET() {
+async function fetchMarket(query: any) {
+  const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
+  
   try {
-    const data = await Promise.all(MARKETS.map(async (m) => {
-      const res = await fetch(`https://gamma-api.polymarket.com/markets?slug=${m.slug}`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
+    // 1. Попытка получить напрямую по backupSlug
+    let res = await fetch(`https://gamma-api.polymarket.com/markets?slug=${query.backupSlug}`, {
+      headers: { 'User-Agent': userAgent },
+      cache: 'no-store'
+    });
+    let data = await res.json();
+
+    // 2. Если не найдено, используем поиск по ключевым словам
+    if (!data || data.length === 0) {
+      res = await fetch(`https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=1&query=${encodeURIComponent(query.term)}`, {
+        headers: { 'User-Agent': userAgent },
+        cache: 'no-store'
       });
-      const json = await res.json();
-      const market = json[0];
+      data = await res.json();
+    }
 
-      if (!market) return { id: m.id, prob: 0, title: "Market Not Found" };
+    const market = data[0];
+    if (!market) return { id: query.id, prob: 0, status: "OFFLINE", title: `SEARCH_FAILED: ${query.id}` };
 
-      // ГЛАВНОЕ ИСПРАВЛЕНИЕ: Парсим строку в массив
-      let prices = market.outcomePrices;
-      if (typeof prices === 'string') {
-        try { prices = JSON.parse(prices); } catch { prices = []; }
-      }
+    // Универсальный парсинг цены (строка или массив)
+    let rawPrice = market.outcomePrices || market.price;
+    if (typeof rawPrice === 'string' && rawPrice.startsWith('[')) {
+      rawPrice = JSON.parse(rawPrice)[0];
+    } else if (Array.isArray(rawPrice)) {
+      rawPrice = rawPrice[0];
+    }
 
-      const prob = prices && prices.length > 0 ? Math.round(parseFloat(prices[0]) * 100) : 0;
-
-      return {
-        id: m.id,
-        prob: prob,
-        title: market.question
-      };
-    }));
-
-    return NextResponse.json(data);
+    return {
+      id: query.id,
+      prob: Math.round(parseFloat(rawPrice as string) * 100) || 0,
+      status: "ACTIVE",
+      title: market.question
+    };
   } catch (e) {
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return { id: query.id, prob: 0, status: "ERROR", title: "CONNECTION_LOST" };
   }
+}
+
+export async function GET() {
+  const results = await Promise.all(SEARCH_QUERIES.map(q => fetchMarket(q)));
+  return NextResponse.json(results);
 }
