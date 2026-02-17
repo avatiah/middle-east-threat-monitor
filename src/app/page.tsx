@@ -1,80 +1,62 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
-export default function WarRoomV7() {
-  const [threats, setThreats] = useState<any[]>([]);
+export default function ThreatEngineV8() {
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const VERSION = "7.0-WAR-ROOM";
+  const VERSION = "8.0-OVERRIDE";
 
-  const refreshData = async () => {
+  const fetchData = async () => {
     try {
       const res = await fetch('/api/threats');
-      const data = await res.json();
-      setThreats(data);
-      setLoading(false);
-    } catch (e) { console.error("Sync Error"); }
+      const json = await res.json();
+      setData(json);
+    } catch (e) { console.error("Link unstable"); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
-    refreshData();
-    const timer = setInterval(refreshData, 20000); // 20 сек интервал для анализа
-    return () => clearInterval(timer);
+    fetchData();
+    const t = setInterval(fetchData, 15000);
+    return () => clearInterval(t);
   }, []);
 
-  const totalIndex = threats.length ? Math.round(threats.reduce((a, b) => a + b.prob, 0) / threats.length) : 0;
+  const riskIndex = data.length ? Math.round(data.reduce((a, b) => a + b.prob, 0) / data.length) : 0;
 
-  if (loading) return (
-    <div style={{background:'#000',color:'#0f0',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'monospace'}}>
-      [ V{VERSION} ] DEPLOYING_GLOBAL_SCANNER...
-    </div>
-  );
+  if (loading) return <div style={{background:'#000',color:'#0f0',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'monospace'}}>BOOTING_V{VERSION}...</div>;
 
   return (
-    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '30px', fontFamily: 'monospace' }}>
-      
-      {/* HEADER: GLOBAL METRICS */}
-      <header style={{ border: '1px solid #0f0', padding: '20px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between' }}>
+    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '20px', fontFamily: 'monospace' }}>
+      <header style={{ borderBottom: '1px solid #0f0', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '20px' }}>SYSTEM_IDENT: THREAT_ENGINE_V{VERSION}</h1>
-          <div style={{ fontSize: '10px', marginTop: '5px' }}>DATA_SOURCE: POLYMARKET_MULTI_NODE // MODE: HYBRID_SEARCH</div>
+          <div style={{fontSize:'10px', opacity:0.5}}>NODE_STATUS: ONLINE</div>
+          <h1 style={{margin:0, fontSize:'24px'}}>THREAT_ENGINE_V{VERSION}</h1>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <span style={{ fontSize: '10px' }}>AGGREGATED_RISK_INDEX</span>
-          <div style={{ fontSize: '48px', fontWeight: 'bold', lineHeight: 1 }}>{totalIndex}%</div>
+        <div style={{textAlign:'right'}}>
+          <div style={{fontSize:'10px'}}>GLOBAL_AGGREGATED_RISK</div>
+          <div style={{fontSize:'54px', fontWeight:'bold', lineHeight:1, color: riskIndex > 25 ? '#f00' : '#0f0'}}>{riskIndex}%</div>
         </div>
       </header>
 
-      {/* THREAT GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px' }}>
-        {threats.map((t, i) => (
-          <div key={i} style={{ border: '1px solid #111', background: '#050505', padding: '20px', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: '0', left: '0', height: '100%', width: '2px', background: t.prob > 30 ? '#f00' : '#0f0' }} />
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-              <span style={{ fontSize: '10px', color: t.status === 'ACTIVE' ? '#0f0' : '#440000' }}>
-                [{t.status}] {t.id}
-              </span>
-              <span style={{ fontSize: '32px', fontWeight: 'bold', color: t.prob > 30 ? '#f00' : '#0f0' }}>{t.prob}%</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+        {data.map((t, i) => (
+          <div key={i} style={{ border: '1px solid #111', background: '#050505', padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <span style={{ fontSize: '10px', color: t.status === 'LIVE' ? '#0f0' : '#f00' }}>[{t.status}] {t.id}</span>
+              <span style={{ fontSize: '36px', fontWeight: 'bold', color: t.prob > 30 ? '#f00' : '#0f0' }}>{t.prob}%</span>
             </div>
-
-            <p style={{ fontSize: '13px', color: '#ccc', height: '40px', margin: '0 0 20px 0', textTransform: 'uppercase' }}>{t.title}</p>
-            
-            <div style={{ height: '2px', background: '#111', width: '100%' }}>
-              <div style={{ 
-                height: '100%', 
-                width: `${t.prob}%`, 
-                background: t.prob > 30 ? '#f00' : '#0f0', 
-                boxShadow: t.prob > 30 ? '0 0 10px #f00' : 'none',
-                transition: 'width 1s ease' 
-              }} />
+            <div style={{ fontSize: '12px', height: '40px', color: '#888', textTransform: 'uppercase', marginBottom: '15px' }}>{t.title}</div>
+            <div style={{ height: '2px', background: '#111' }}>
+              <div style={{ height: '100%', width: `${t.prob}%`, background: t.prob > 30 ? '#f00' : '#0f0', boxShadow: t.prob > 30 ? '0 0 10px #f00' : 'none' }} />
             </div>
           </div>
         ))}
       </div>
 
-      <footer style={{ marginTop: '50px', borderTop: '1px solid #111', paddingTop: '20px', fontSize: '10px', opacity: 0.5 }}>
-        LATEST_SYNC: {new Date().toLocaleTimeString()} // ALL_SYSTEMS_OPERATIONAL
-      </footer>
+      <div style={{ marginTop: '40px', padding: '15px', border: '1px solid #002200', background: '#020202', fontSize: '10px', color: '#006600' }}>
+        [DEBUG_LOG]: {new Date().toISOString()} - INCOMING_STREAM_DECRYPTED...<br/>
+        [SENSORS]: {data.filter(d => d.status === 'LIVE').length}/{data.length} ACTIVE_NODES_FOUND
+      </div>
     </div>
   );
 }
