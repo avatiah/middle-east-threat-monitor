@@ -1,105 +1,82 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
-export default function InfinityThreatOS() {
-  const [data, setData] = useState<any[]>([]);
-  const [logs, setLogs] = useState<string[]>([]);
+export default function UltimateIntelOS() {
+  const [nodes, setNodes] = useState<any[]>([]);
 
-  const refresh = async () => {
-    try {
-      const res = await fetch('/api/threats');
-      const json = await res.json();
-      if (Array.isArray(json)) {
-        setData(json);
-        setLogs(prev => [`[${new Date().toLocaleTimeString()}] UPLINK_SYNC_SUCCESS // ALL_NODES_STABLE`, ...prev].slice(0, 8));
-      }
-    } catch (e) { console.warn("SYNC_ERROR"); }
+  const sync = async () => {
+    const res = await fetch('/api/threats');
+    const data = await res.json();
+    if (Array.isArray(data)) setNodes(data);
   };
 
-  useEffect(() => { refresh(); const i = setInterval(refresh, 5000); return () => clearInterval(i); }, []);
-
-  const getStyle = (p: number) => {
-    if (p > 40) return { color: '#f00', label: 'DEFCON 2', msg: 'CRITICAL_DANGER' };
-    if (p > 25) return { color: '#ffaa00', label: 'DEFCON 3', msg: 'HIGH_ALERT' };
-    return { color: '#0f0', label: 'DEFCON 4', msg: 'NOMINAL' };
-  };
+  useEffect(() => { sync(); const i = setInterval(sync, 5000); return () => clearInterval(i); }, []);
 
   return (
-    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '25px', fontFamily: 'monospace' }}>
+    <div style={{ background: '#000', color: '#0f0', minHeight: '100vh', padding: '20px', fontFamily: 'monospace' }}>
       
-      {/* HEADER BAR */}
-      <div style={{ border: '1px solid #0f0', padding: '15px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
+      {/* HEADER: ТЕКУЩИЙ СТАТУС СИСТЕМЫ */}
+      <div style={{ border: '1px solid #0f0', padding: '20px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontSize: '22px', fontWeight: 'bold' }}>STRATEGIC_INTELLIGENCE_OS // V24.0-INFINITY</div>
-          <div style={{ fontSize: '10px', opacity: 0.5 }}>IDENT: 11.0-ENTERPRISE // SOURCE: POLYMARKET_CORE_NODES</div>
+          <div style={{ fontSize: '20px', fontWeight: 'bold' }}>STRATEGIC_OS_V24.0 // INFINITY_MONITOR</div>
+          <div style={{ fontSize: '9px', opacity: 0.6 }}>ДАННЫЕ ОСНОВАНЫ НА РЫНКАХ ПРЕДСКАЗАНИЙ (REAL-MONEY SENTIMENT)</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '32px', color: '#f00' }}>{data.length ? Math.max(...data.map(d=>d.prob)) : 0}%</div>
-          <div style={{ fontSize: '9px' }}>MAX_THREAT_LEVEL</div>
+          <div style={{ fontSize: '32px', color: '#f00' }}>{nodes.length ? Math.max(...nodes.map(n=>n.prob)) : 0}%</div>
+          <div style={{ fontSize: '9px' }}>ПИКОВЫЙ УРОВЕНЬ УГРОЗЫ</div>
         </div>
       </div>
 
-      {/* PRIMARY SENSOR GRID */}
+      {/* ГРИД ДАННЫХ С РАЗЪЯСНЕНИЯМИ */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '20px' }}>
-        {data.map((n, i) => {
-          const cfg = getStyle(n.prob);
-          return (
-            <div key={i} style={{ border: '1px solid #333', padding: '20px', background: '#050505' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-                <span style={{ color: n.status === 'ACTIVE_STREAM' ? '#0f0' : '#555' }}>[{n.id}] {n.status}</span>
-                <span style={{ color: cfg.color }}>{cfg.label}</span>
-              </div>
-              <div style={{ fontSize: '64px', fontWeight: 'bold', color: cfg.color, margin: '10px 0' }}>{n.prob}%</div>
-              <div style={{ fontSize: '9px', color: '#fff', height: '30px', opacity: 0.7 }}>{n.title}</div>
-              <div style={{ height: '2px', background: '#111', marginTop: '15px' }}>
-                <div style={{ height: '100%', width: `${n.prob}%`, background: cfg.color, boxShadow: `0 0 10px ${cfg.color}` }} />
-              </div>
+        {nodes.map((n, i) => (
+          <div key={i} style={{ border: '1px solid #333', padding: '15px', background: '#050505' }}>
+            <div style={{ fontSize: '10px', color: '#555', marginBottom: '5px' }}>NODE_ID: {n.id}</div>
+            <div style={{ fontSize: '48px', fontWeight: 'bold', color: n.prob > 40 ? '#f00' : '#0f0' }}>{n.prob}%</div>
+            <div style={{ fontSize: '10px', color: '#fff', marginBottom: '10px' }}>{n.desc}</div>
+            <div style={{ fontSize: '8px', borderTop: '1px solid #222', paddingTop: '5px', color: '#0f0' }}>
+              ЗАЧЕМ ЭТО: Отражает уверенность инвесторов в начале конфликта. Рост {'>'} 45% = неизбежность.
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
-      {/* WHALE TRACKER & ANALYTICS */}
+      {/* ТАБЛИЦА С МАКСИМУМОМ ИНФОРМАЦИИ */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
         <div style={{ border: '1px solid #0f0', padding: '20px' }}>
-          <div style={{ fontSize: '12px', borderBottom: '1px solid #222', paddingBottom: '10px', marginBottom: '15px' }}>WHALE_WATCH // ТРЕЙДЕРЫ-ЛИДЕРЫ (WIN_RATE 85%+)</div>
+          <div style={{ fontSize: '12px', borderBottom: '1px solid #222', paddingBottom: '10px', marginBottom: '15px' }}>
+            DEEP_DATA_ANALYTICS // КТО И СКОЛЬКО СТАВИТ НА КОНФЛИКТ
+          </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
             <thead>
-              <tr style={{ textAlign: 'left', opacity: 0.4 }}>
-                <th style={{ padding: '8px' }}>NODE_ID</th>
-                <th style={{ padding: '8px' }}>VOL_USD</th>
-                <th style={{ padding: '8px' }}>LIQUIDITY</th>
-                <th style={{ padding: '8px' }}>SIGNATURE</th>
-                <th style={{ padding: '8px' }}>ACTION</th>
+              <tr style={{ textAlign: 'left', opacity: 0.5 }}>
+                <th style={{ padding: '8px' }}>УЗЕЛ</th>
+                <th style={{ padding: '8px' }}>ОБЪЕМ (USD)</th>
+                <th style={{ padding: '8px' }}>ЛИКВИДНОСТЬ</th>
+                <th style={{ padding: '8px' }}>КРУПНЫЙ ИГРОК</th>
+                <th style={{ padding: '8px' }}>ВЛИЯНИЕ</th>
               </tr>
             </thead>
             <tbody>
-              {data.map((n, i) => (
+              {nodes.map((n, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid #111' }}>
                   <td style={{ padding: '10px', fontWeight: 'bold' }}>{n.id}</td>
-                  <td style={{ padding: '10px' }}>${n.live_vol}</td>
-                  <td style={{ padding: '10px' }}>${n.liquidity}</td>
-                  <td style={{ padding: '10px', color: '#ffaa00' }}>{n.whale}</td>
-                  <td style={{ padding: '10px', color: n.prob > 40 ? '#f00' : '#0f0' }}>
-                    {n.prob > 40 ? 'AGGRESSIVE_BUY' : 'HOLDING'}
-                  </td>
+                  <td style={{ padding: '10px' }}>{n.vol}</td>
+                  <td style={{ padding: '10px' }}>{n.liq}</td>
+                  <td style={{ padding: '10px', color: '#ffaa00' }}>{n.trader}</td>
+                  <td style={{ padding: '10px', color: n.prob > 40 ? '#f00' : '#888' }}>{n.impact}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* SYSTEM LOGS & PROFILES */}
         <div style={{ border: '1px solid #0f0', padding: '20px', background: '#050505' }}>
-          <div style={{ fontSize: '12px', marginBottom: '15px' }}>INTELLIGENCE_LOG</div>
-          <div style={{ fontSize: '10px', color: '#666', lineHeight: '1.5' }}>
-            {logs.map((l, i) => <div key={i}>{l}</div>)}
-            <div style={{ marginTop: '20px', borderTop: '1px solid #222', paddingTop: '10px' }}>
-              <span style={{ color: '#ffaa00' }}>PRO_WATCH: GC_WHALE_01</span><br/>
-              WIN_RATE: 88.4%<br/>
-              LAST_MAJOR_BET: $142,000 [LEB-INV]<br/>
-              STATUS: ACCUMULATING_POSITION
-            </div>
+          <div style={{ fontSize: '12px', marginBottom: '10px' }}>ЧТО ЭТО ЗНАЧИТ? (FAQ)</div>
+          <div style={{ fontSize: '10px', color: '#888', lineHeight: '1.4' }}>
+            <p><b style={{color:'#0f0'}}>% Вероятности:</b> Это не гадание. Это цена акции на рынке Polymarket. Если она 46%, значит "рынок" готов платить 46 центов за 1 доллар прибыли в случае войны.</p>
+            <p><b style={{color:'#0f0'}}>GC_WHALE_01:</b> Профиль топ-трейдера с прибылью более $2M. Его активность — самый точный индикатор инсайда.</p>
+            <p><b style={{color:'#0f0'}}>Объем:</b> Чем больше денег в узле, тем сложнее манипулировать процентом. Миллионные объемы подтверждают серьезность угрозы.</p>
           </div>
         </div>
       </div>
