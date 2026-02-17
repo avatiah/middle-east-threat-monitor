@@ -2,57 +2,56 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const SEARCH_CONFIG = [
-  { id: "ISR-IRN", q: "Israel strikes Iran", slug: "israel-strikes-iran-by-march-31-2026" },
-  { id: "USA-IRN", q: "US strikes Iran", slug: "us-strikes-iran-by-march-31-2026" },
-  { id: "IRN-ISR", q: "Iran strike on Israel", slug: "iran-strike-on-israel-by-march-31-2026" },
-  { id: "LEB-OPS", q: "Israel ground operation Lebanon", slug: "israeli-ground-operation-in-lebanon-by-march-31" }
+const SENSORS = [
+  { id: "ISR-IRN", q: "Israel strike Iran", tags: ["Israel", "Iran"] },
+  { id: "USA-IRN", q: "US military Iran", tags: ["USA", "Iran"] },
+  { id: "IRN-ISR", q: "Iran strike Israel", tags: ["Iran", "Israel"] },
+  { id: "LEB-OPS", q: "Israel ground Lebanon", tags: ["Lebanon", "Israel"] }
 ];
 
-async function getMarketData(item: typeof SEARCH_CONFIG[0]) {
-  const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-  
-  try {
-    // ШАГ 1: Пробуем прямой Slug
-    let res = await fetch(`https://gamma-api.polymarket.com/markets?slug=${item.slug}`, {
-      headers: { 'User-Agent': ua },
-      cache: 'no-store'
-    });
-    let data = await res.json();
-
-    // ШАГ 2: Если пусто, ищем через глобальный поиск по активным рынкам
-    if (!data || data.length === 0) {
-      res = await fetch(`https://gamma-api.polymarket.com/search?q=${encodeURIComponent(item.q)}&active=true`, {
-        headers: { 'User-Agent': ua },
-        cache: 'no-store'
-      });
-      data = await res.json();
-    }
-
-    const market = data[0];
-    if (!market) return { id: item.id, prob: 0, status: "OFFLINE", title: `SEARCH_FAILED: ${item.id}` };
-
-    // Универсальный парсинг цены (учитываем все форматы 2026 года)
-    let priceRaw = market.outcomePrices || market.price;
-    if (typeof priceRaw === 'string') {
-        try { priceRaw = JSON.parse(priceRaw); } catch { /* ignore */ }
-    }
-    
-    const finalPrice = Array.isArray(priceRaw) ? priceRaw[0] : priceRaw;
-    const probability = Math.round(parseFloat(finalPrice) * 100);
-
-    return {
-      id: item.id,
-      prob: isNaN(probability) ? 0 : probability,
-      status: "ACTIVE",
-      title: market.question || item.q
-    };
-  } catch (e) {
-    return { id: item.id, prob: 0, status: "ERROR", title: "CONNECTION_FAILURE" };
-  }
-}
-
 export async function GET() {
-  const results = await Promise.all(SEARCH_CONFIG.map(getMarketData));
-  return NextResponse.json(results);
+  const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
+  try {
+    // 1. Получаем расширенный список активных рынков (увеличиваем лимит)
+    const response = await fetch(`https://gamma-api.polymarket.com/markets?active=true&limit=200`, {
+      headers: { 'User-Agent': ua },
+      next: { revalidate: 15 } 
+    });
+    const allMarkets = await response.json();
+
+    const results = SENSORS.map(sensor => {
+      // 2. Улучшенный поиск: ищем пересечение тегов и слов в заголовке
+      const match = allMarkets.find((m: any) => {
+        const title = m.question.toLowerCase();
+        return sensor.tags.every(tag => title.includes(tag.toLowerCase())) || 
+               title.includes(sensor.q.toLowerCase());
+      });
+
+      if (!match) {
+        // Резервные данные, если рынок временно снят с листинга (аналитический прогноз)
+        return { id: sensor.id, prob: 0, status: "NODE_OFFLINE", title: `SEARCHING_ACTIVE_STREAM_${sensor.id}` };
+      }
+
+      // 3. Извлечение цены из вложенных структур Polymarket 2026
+      let price = 0;
+      if (match.outcomePrices) {
+        const p = typeof match.outcomePrices === 'string' ? JSON.parse(match.outcomePrices) : match.outcomePrices;
+        price = parseFloat(p[0]);
+      } else {
+        price = parseFloat(match.price || "0");
+      }
+
+      return {
+        id: sensor.id,
+        prob: Math.round(price * 100),
+        status: "LIVE",
+        title: match.question.toUpperCase()
+      };
+    });
+
+    return NextResponse.json(results);
+  } catch (e) {
+    return NextResponse.json({ error: "UPLINK_FAILURE" }, { status: 500 });
+  }
 }
