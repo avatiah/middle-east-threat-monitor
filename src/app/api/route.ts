@@ -3,54 +3,39 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 const SENSORS = [
-  { id: "ISR-IRN", tags: ["israel", "strike", "iran"] },
-  { id: "USA-IRN", tags: ["us", "military", "iran"] },
-  { id: "IRN-ISR", tags: ["iran", "strike", "israel"] },
-  { id: "LEB-OPS", tags: ["israel", "lebanon", "ground"] }
+  { id: "ISR-IRN", words: ["israel", "strike", "iran"], desc: "Прямой удар Израиля по Ирану" },
+  { id: "USA-LOG", words: ["us", "military", "iran"], desc: "Военная операция США против Ирана" },
+  { id: "HORMUZ", words: ["strait", "hormuz"], desc: "Блокировка Ормузского пролива" },
+  { id: "LEB-INV", words: ["lebanon", "ground"], desc: "Масштабное наземное вторжение в Ливан" }
 ];
 
 export async function GET() {
-  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
-
   try {
-    // 1. Принудительный дамп всех активных рынков (увеличиваем лимит)
-    const response = await fetch('https://gamma-api.polymarket.com/markets?active=true&limit=1000&closed=false', {
-      headers: { 'User-Agent': UA },
-      next: { revalidate: 0 }
+    const res = await fetch('https://gamma-api.polymarket.com/markets?active=true&limit=100', {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      next: { revalidate: 10 }
     });
-    
-    const allMarkets = await response.json();
+    const markets = await res.json();
 
-    const results = SENSORS.map(sensor => {
-      // 2. Поиск по весам: ищем рынок, где максимум совпадений тегов
-      const match = allMarkets
-        .map((m: any) => ({
-          market: m,
-          score: sensor.tags.filter(t => m.question.toLowerCase().includes(t)).length
-        }))
-        .filter(m => m.score >= 2)
-        .sort((a, b) => b.score - a.score)[0]?.market;
+    const data = SENSORS.map(s => {
+      const match = markets.find((m: any) => 
+        s.words.every(word => m.question.toLowerCase().includes(word))
+      );
 
-      if (!match) return { id: sensor.id, prob: 0, status: "SEARCHING", title: `NO ACTIVE DATA FOR ${sensor.id}` };
+      if (!match) return { id: s.id, prob: null, desc: s.desc };
 
-      // 3. Извлечение цены из структуры 2026 года
-      let price = 0;
-      const raw = match.outcomePrices || match.price;
-      try {
-        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        price = Array.isArray(parsed) ? parseFloat(parsed[0]) : parseFloat(parsed);
-      } catch { price = parseFloat(raw || "0"); }
-
+      const prices = typeof match.outcomePrices === 'string' ? JSON.parse(match.outcomePrices) : match.outcomePrices;
       return {
-        id: sensor.id,
-        prob: Math.round(price * 100),
-        status: "LIVE",
-        title: match.question.toUpperCase()
+        id: s.id,
+        prob: Math.round(parseFloat(prices[0]) * 100),
+        title: match.question,
+        desc: s.desc,
+        status: "ACTIVE"
       };
     });
 
-    return NextResponse.json(results);
+    return NextResponse.json(data);
   } catch (e) {
-    return NextResponse.json({ error: "DATABASE_UNREACHABLE" }, { status: 500 });
+    return NextResponse.json({ error: "API_TIMEOUT" }, { status: 500 });
   }
 }
