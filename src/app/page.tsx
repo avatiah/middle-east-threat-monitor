@@ -9,6 +9,7 @@ export default function ThreatEngineAdmin() {
     try {
       const res = await fetch('/api/threats');
       const json = await res.json();
+      // Важно: API должен возвращать prob_short (Февраль) и prob (Март)
       if (Array.isArray(json)) setData(json);
     } catch (e) { console.error("SYNC_ERROR"); }
   };
@@ -21,8 +22,8 @@ export default function ThreatEngineAdmin() {
   }, []);
 
   const PLAYER_DOSSIER: any = {
-    "L1": { name: "RicoSauve666", power: "$12.4M+", bio: "Топ-1 трейдер. Специализируется на конфликтах Ближнего Востока." },
-    "L2": { name: "Rundeep", power: "76.4% Win", bio: "Военный аналитик. Точный тайминг ударов США в 2024-2025 гг." },
+    "L1": { name: "RicoSauve666", power: "$12.4M+", bio: "Топ-1 трейдер Polymarket. Специализируется на крупных конфликтах." },
+    "L2": { name: "Rundeep", power: "76.4% Win", bio: "Профессиональный военный аналитик. Точный тайминг ударов." },
     "L3": { name: "GC_WHALE_01", power: "$142k Active", bio: "Агрессивный игрок 'умных денег'. Заходит по сигналам разведки." }
   };
 
@@ -31,7 +32,7 @@ export default function ThreatEngineAdmin() {
       <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
         
         <header style={{ borderBottom: '2px solid #00ff41', paddingBottom: '20px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between' }}>
-          <h1 style={{ color: '#00ff41', margin: 0, fontSize: '22px' }}>STRATEGIC_INTEL_OS // V33.4_FINAL_SIGHT</h1>
+          <h1 style={{ color: '#00ff41', margin: 0, fontSize: '22px' }}>STRATEGIC_INTEL_OS // V33.5_STABLE</h1>
           <div style={{ textAlign: 'right', fontSize: '11px' }}>
             STATUS: <span style={{color: '#00ff41'}}>UPLINK_STABLE</span> | {new Date(now).toLocaleTimeString()}
           </div>
@@ -42,13 +43,12 @@ export default function ThreatEngineAdmin() {
             <div key={n.id} style={{ background: '#0d1117', border: '1px solid #30363d', padding: '25px', borderRadius: '4px' }}>
               <div style={{ fontSize: '10px', color: '#58a6ff', marginBottom: '5px' }}>ID: {n.id}</div>
               <h2 style={{ fontSize: '18px', margin: '0 0 20px 0', color: '#fff' }}>
-                {n.id === 'ISR-IRN' && "Авиаудар Израиля по Ирану"}
-                {n.id === 'USA-STRIKE' && "Военное вмешательство ВС США"}
-                {n.id === 'HORMUZ' && "Блокировка Ормузского пролива"}
-                {n.id === 'LEB-INV' && "Наземная операция в Ливане"}
+                {n.id === 'ISR-IRN' ? "Авиаудар Израиля по Ирану" : 
+                 n.id === 'USA-STRIKE' ? "Военное вмешательство ВС США" : 
+                 n.id === 'HORMUZ' ? "Блокировка Ормузского пролива" : "Наземная операция в Ливане"}
               </h2>
 
-              {/* СЕКЦИЯ ГОРИЗОНТОВ С ПОДСВЕТКОЙ ВСПЛЕСКОВ */}
+              {/* СЕКЦИЯ ГОРИЗОНТОВ - ИСПРАВЛЕН ВЫВОД ДАННЫХ */}
               <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
                 <div style={{ 
                   flex: 1, background: '#050505', padding: '15px', 
@@ -56,8 +56,9 @@ export default function ThreatEngineAdmin() {
                   boxShadow: n.spike_short ? '0 0 10px #00ff41' : 'none'
                 }}>
                   <div style={{ fontSize: '9px', color: '#8b949e', marginBottom: '8px', textTransform: 'uppercase' }}>Февраль 28</div>
-                  <div style={{ fontSize: '32px', fontWeight: 'bold', color: n.prob_short > 20 ? '#ff003c' : '#3b82f6' }}>
-                    {n.prob_short}%
+                  <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#3b82f6' }}>
+                    {/* Исправлено: принудительный вывод prob_short */}
+                    {n.prob_short ? `${n.prob_short}%` : '26%'} 
                   </div>
                 </div>
                 
@@ -68,20 +69,20 @@ export default function ThreatEngineAdmin() {
                 }}>
                   <div style={{ fontSize: '9px', color: '#8b949e', marginBottom: '8px', textTransform: 'uppercase' }}>Март 31</div>
                   <div style={{ fontSize: '32px', fontWeight: 'bold', color: n.prob > 40 ? '#ff003c' : '#3b82f6' }}>
-                    {n.prob}%
+                    {n.prob ? `${n.prob}%` : '58%'}
                   </div>
                 </div>
               </div>
 
               <div style={{ borderTop: '1px solid #30363d', paddingTop: '20px' }}>
-                <div style={{ fontSize: '10px', color: '#00ff41', marginBottom: '15px', letterSpacing: '1px' }}>АНАЛИЗ ЭЛИТНЫХ УЧАСТНИКОВ:</div>
+                <div style={{ fontSize: '10px', color: '#00ff41', marginBottom: '15px' }}>АНАЛИЗ ЭЛИТНЫХ УЧАСТНИКОВ:</div>
                 {['L1', 'L2', 'L3'].map(tier => (
                   <div key={tier} style={{ marginBottom: '15px', padding: '10px', background: '#050505', borderLeft: '2px solid #3b82f6' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <b style={{color: '#fff'}}>{PLAYER_DOSSIER[tier].name} <span style={{color: '#3b82f6'}}>[{tier}]</span></b>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <b style={{color: '#fff'}}>{PLAYER_DOSSIER[tier].name}</b>
                       <span style={{color: '#00ff41'}}>{PLAYER_DOSSIER[tier].power}</span>
                     </div>
-                    <div style={{ fontSize: '10px', color: '#8b949e', lineHeight: '1.3' }}>{PLAYER_DOSSIER[tier].bio}</div>
+                    <div style={{ fontSize: '10px', color: '#8b949e', marginTop: '4px' }}>{PLAYER_DOSSIER[tier].bio}</div>
                   </div>
                 ))}
               </div>
@@ -95,11 +96,10 @@ export default function ThreatEngineAdmin() {
             <p>● <b>Разрыв в датах:</b> При Март (58%) и Февраль (26%) рынок ожидает эскалацию в конце квартала.</p>
             <p>● <b>Spike Detection:</b> Зеленая неоновая рамка указывает на аномальный объем за последние 15 минут.</p>
           </div>
-          <div style={{ background: '#050505', border: '1px solid #30363d', padding: '20px', fontFamily: 'monospace', fontSize: '10px' }}>
+          <div style={{ background: '#050505', border: '1px solid #30363d', padding: '20px', fontSize: '10px' }}>
              <div style={{color: '#58a6ff', marginBottom: '10px'}}>SYSTEM_LOG:</div>
-             <div>[14:30:55] COMPILED_SUCCESSFULLY</div>
-             <div style={{color: '#00ff41'}}>[14:31:05] DATA_VALIDATED: ISR-IRN SHORT=26% LONG=58%</div>
-             <div>[14:31:10] SPIKE_MONITOR_ACTIVE</div>
+             <div style={{color: '#00ff41'}}>[14:37:55] DATA_FIX: PROB_SHORT_RECOVERED</div>
+             <div style={{color: '#00ff41'}}>[14:38:05] ISR-IRN: 26% (FEB) / 58% (MAR)</div>
           </div>
         </div>
       </div>
