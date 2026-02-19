@@ -1,6 +1,6 @@
 'use client';
+<a href="/analytics" style={{ color: '#00ff41', fontSize: '10px' }}>OPEN ANALYTICS TERMINAL →</a>
 import React, { useEffect, useState } from 'react';
-
 export default function ThreatEngineAdmin() {
   const [data, setData] = useState<any[]>([]);
   const [now, setNow] = useState(Date.now());
