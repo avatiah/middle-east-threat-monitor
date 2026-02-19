@@ -25,7 +25,8 @@ export async function GET() {
       return {
         id: s.id,
         prob: match ? Math.round(parseFloat(match.outcomePrices[0]) * 100) : s.fallback,
-        volume: match ? Math.round(match.volume).toLocaleString() : "SYNCING...",
+       // volume: match ? Math.round(match.volume).toLocaleString() : "SYNCING...",
+        volume: match ? Math.round(match.volume).toLocaleString() : "0",
         status: match ? "LIVE_FEED" : "ESTIMATED_SENTIMENT",
         updated: Date.now() - Math.floor(Math.random() * 2000)
       };
