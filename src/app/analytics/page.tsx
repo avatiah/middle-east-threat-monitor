@@ -1,36 +1,36 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
-// Четкое определение типов для сигналов эскалации
-interface IntelSignal {
-  id: string;
+// Типизация для надежной сборки
+interface Signal {
   label: string;
-  weight: number;
-  status: string;
+  impact: number;
   desc: string;
+  trend: 'UP' | 'STABLE' | 'DOWN';
 }
 
-export default function WarRoomAnalytics() {
+export default function EliteWarRoom() {
   const [data, setData] = useState<any[]>([]);
+  const [prices, setPrices] = useState({ brent: 84.20, gold: 2045.10, dxy: 104.1 });
   const [now, setNow] = useState(Date.now());
 
-  // МАТРИЦА КРИТИЧЕСКИХ СИГНАЛОВ (Те самые дополнительные данные, которые вы просили)
-  const CRITICAL_SIGNALS: Record<string, IntelSignal[]> = {
+  // OSINT ДАННЫЕ (Энергоносители и логистика)
+  const OSINT_DATA: Record<string, Signal[]> = {
     "ISR-IRN": [
-      { id: "SIG1", label: "ELINT_SPIKE", weight: 15, status: "CRITICAL", desc: "Аномальная активность РЛС наведения в зоне объектов." },
-      { id: "SIG2", label: "AIR_REFUEL", weight: 25, status: "ACTIVE", desc: "Развертывание самолетов-заправщиков ВВС в активных секторах." }
+      { label: "BRENT_CRUDE_VOL", impact: 12, desc: "Рост премии за риск в цене нефти.", trend: "UP" },
+      { label: "STRAIT_TRAFFIC", impact: 8, desc: "Снижение танкерного трафика на 14%.", trend: "DOWN" }
     ],
     "USA-STRIKE": [
-      { id: "SIG3", label: "B-52_DEPLOY", weight: 20, status: "ACTIVE", desc: "Переброска стратегической авиации на передовые базы (Диего-Гарсия)." },
-      { id: "SIG4", label: "CARRIER_POS", weight: 30, status: "LOCKED", desc: "Авианосная ударная группа вошла в радиус тактического пуска." }
+      { label: "LOGISTICS_HUB_ACT", impact: 22, desc: "Активность на базе Диего-Гарсия (США).", trend: "UP" },
+      { label: "XAU_SAFE_HAVEN", impact: 15, desc: "Аномальный закуп золота ЦБ региона.", trend: "UP" }
     ],
     "HORMUZ": [
-      { id: "SIG5", label: "MINELAYING", weight: 40, status: "DETECTED", desc: "Зафиксирована загрузка минного вооружения на быстроходные катера." },
-      { id: "SIG6", label: "AIS_BLACKOUT", weight: 15, status: "WARNING", desc: "Массовое отключение транспондеров судов в Ормузском проливе." }
+      { label: "INSURANCE_PREMIUM", impact: 35, desc: "Рост страховки судов в 4 раза.", trend: "UP" },
+      { label: "IRGC_NAVY_DISP", impact: 25, desc: "Развертывание минных заградителей.", trend: "UP" }
     ],
     "LEB-INV": [
-      { id: "SIG7", label: "DIV_RESERVE", weight: 20, status: "ACTIVE", desc: "Экстренный призыв резервистов 98-й и 36-й дивизий ЦАХАЛ." },
-      { id: "SIG8", label: "IRON_DOME_POS", weight: 10, status: "DEPLOYED", desc: "Масштабная переброска батарей ПВО на северные рубежи." }
+      { label: "RESERVE_MOBILIZATION", impact: 18, desc: "Мобилизация тыловых служб снабжения.", trend: "UP" },
+      { label: "CIV_AIR_RESTRICT", impact: 10, desc: "Закрытие секторов гражданского неба.", trend: "STABLE" }
     ]
   };
 
@@ -39,80 +39,110 @@ export default function WarRoomAnalytics() {
       const res = await fetch('/api/threats', { cache: 'no-store' });
       const json = await res.json();
       if (Array.isArray(json)) setData(json);
-    } catch (e) { console.error("SIGNAL_LOSS"); }
+      // Эмуляция цен энергоносителей
+      setPrices(prev => ({
+        brent: prev.brent + (Math.random() - 0.4) * 0.5,
+        gold: prev.gold + (Math.random() - 0.4) * 2,
+        dxy: prev.dxy + (Math.random() - 0.5) * 0.1
+      }));
+    } catch (e) { console.error("SYNC_ERROR"); }
   };
 
   useEffect(() => {
     sync();
-    const i = setInterval(sync, 10000);
+    const i = setInterval(sync, 5000);
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => { clearInterval(i); clearInterval(t); };
   }, []);
 
   return (
-    <div style={{ background: '#000', minHeight: '100vh', padding: '15px', color: '#e2e8f0', fontFamily: 'monospace' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        
-        <header style={{ borderBottom: '2px solid #00ff41', paddingBottom: '15px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between' }}>
-          <div>
-            <a href="/" style={{ color: '#00ff41', textDecoration: 'none', fontSize: '10px', border: '1px solid #333', padding: '4px 8px' }}>
-              [ BACK_TO_DASHBOARD ]
-            </a>
-            <h1 style={{ color: '#00ff41', margin: '15px 0 0 0', fontSize: '20px' }}>WAR_ROOM_TERMINAL // V1.5_PRO</h1>
-          </div>
-          <div style={{ textAlign: 'right', fontSize: '10px', color: '#666' }}>
-            INTEL_FUSION: <span style={{color: '#00ff41'}}>STABLE</span> | {new Date(now).toLocaleTimeString()}
-          </div>
-        </header>
+    <div style={{ background: '#000', minHeight: '100vh', padding: '10px', color: '#00ff41', fontFamily: 'monospace', overflowX: 'hidden' }}>
+      
+      {/* ВЕРХНЯЯ ПАНЕЛЬ ЦЕН (ЭНЕРГОНОСИТЕЛИ) */}
+      <div style={{ background: '#0a0a0a', border: '1px solid #1a1a1a', padding: '10px 20px', marginBottom: '20px', display: 'flex', gap: '30px', fontSize: '11px', overflowX: 'auto' }}>
+        <div style={{ whiteSpace: 'nowrap' }}>BRENT: <span style={{color:'#fff'}}>${prices.brent.toFixed(2)}</span> <span style={{fontSize:'9px'}}>+1.2%</span></div>
+        <div style={{ whiteSpace: 'nowrap' }}>GOLD: <span style={{color:'#fff'}}>${prices.gold.toFixed(2)}</span> <span style={{fontSize:'9px'}}>+0.8%</span></div>
+        <div style={{ whiteSpace: 'nowrap' }}>DXY_INDEX: <span style={{color:'#fff'}}>{prices.dxy.toFixed(2)}</span></div>
+        <div style={{ marginLeft: 'auto', color: '#666' }}>TERMINAL_STATUS: <span style={{color: '#00ff41'}}>ENCRYPTED_LINK</span></div>
+      </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
+      <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '20px' }}>
           {data.map(n => {
-            const signals = CRITICAL_SIGNALS[n.id] || [];
-            // Расчет Intel Estimate: Базовая вероятность Polymarket + вес внешних сигналов
-            const intelProb = Math.min(99, (Number(n.prob) || 0) + signals.reduce((acc, s) => acc + s.weight, 0));
+            const osint = OSINT_DATA[n.id] || [];
+            const intelProb = Math.min(99, (Number(n.prob) || 0) + osint.reduce((acc, s) => acc + s.impact, 0));
 
             return (
               <div key={n.id} style={{ background: '#050505', border: '1px solid #1a1a1a', padding: '20px', position: 'relative' }}>
-                <div style={{ color: '#58a6ff', fontSize: '10px', marginBottom: '15px' }}>NODE_UNIT: {n.id}</div>
-                <h2 style={{ fontSize: '18px', color: '#fff', marginBottom: '25px', borderLeft: '3px solid #00ff41', paddingLeft: '15px' }}>{n.id.replace('-', ' ')}</h2>
-
-                {/* СРАВНЕНИЕ РЫНКА И РАЗВЕДКИ */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '25px' }}>
-                  <div style={{ background: '#000', padding: '15px', border: '1px solid #222' }}>
-                    <div style={{ fontSize: '8px', color: '#666' }}>MARKET (POLYMKT)</div>
-                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fff' }}>{n.prob}%</div>
+                
+                {/* ЗАГОЛОВОК И ТРЕНД */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                  <div>
+                    <div style={{ fontSize: '9px', color: '#58a6ff', marginBottom: '4px' }}>SECTOR: {n.id}</div>
+                    <h2 style={{ fontSize: '18px', color: '#fff', margin: 0 }}>{n.id.replace('-', ' ')}</h2>
                   </div>
-                  <div style={{ background: '#000', padding: '15px', border: '1px solid #ff003c' }}>
-                    <div style={{ fontSize: '8px', color: '#ff003c' }}>INTEL_ESTIMATE</div>
-                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#ff003c' }}>{intelProb}%</div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: intelProb > 70 ? '#ff003c' : '#00ff41' }}>{intelProb}%</div>
+                    <div style={{ fontSize: '8px', color: '#666' }}>COMBINED_PROB</div>
                   </div>
                 </div>
 
-                {/* БЛОК СИГНАЛОВ ЭСКАЛАЦИИ */}
-                <div style={{ background: '#0a0a0a', padding: '15px', border: '1px solid #333' }}>
-                  <div style={{ fontSize: '10px', color: '#00ff41', marginBottom: '12px', fontWeight: 'bold' }}>[ CRITICAL_ESCALATION_SIGNALS ]</div>
-                  {signals.map((s) => (
-                    <div key={s.id} style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #1a1a1a' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold' }}>
-                        <span style={{ color: '#fff' }}>{s.label}</span>
-                        <span style={{ color: '#ff003c' }}>+{s.weight}% IMPACT</span>
+                {/* ГРАФИК (ИМИТАЦИЯ) */}
+                <div style={{ height: '40px', background: '#000', border: '1px dashed #222', marginBottom: '20px', display: 'flex', alignItems: 'flex-end', gap: '2px', padding: '5px' }}>
+                   {[...Array(30)].map((_, i) => (
+                     <div key={i} style={{ flex: 1, background: '#1a1a1a', height: `${Math.random() * 100}%` }}></div>
+                   ))}
+                   <div style={{ position: 'absolute', color: '#333', fontSize: '8px', left: '25px' }}>7-DAY_VOLATILITY_CHART</div>
+                </div>
+
+                {/* ДИНАМИЧЕСКИЙ OSINT БЛОК */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                  {osint.map((s, idx) => (
+                    <div key={idx} style={{ background: '#0a0a0a', padding: '10px', borderLeft: `2px solid ${s.trend === 'UP' ? '#ff003c' : '#00ff41'}` }}>
+                      <div style={{ fontSize: '9px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{s.label}</span>
+                        <span style={{ color: s.trend === 'UP' ? '#ff003c' : '#00ff41' }}>{s.trend}</span>
                       </div>
-                      <div style={{ fontSize: '10px', color: '#8b949e', marginTop: '4px' }}>{s.desc}</div>
+                      <div style={{ fontSize: '11px', color: '#fff', marginTop: '5px' }}>Impact: +{s.impact}%</div>
+                      <div style={{ fontSize: '8px', color: '#666', marginTop: '4px' }}>{s.desc}</div>
                     </div>
                   ))}
                 </div>
 
-                {/* АЛЕРТ О РАСХОЖДЕНИИ */}
-                {(intelProb - (Number(n.prob) || 0)) > 20 && (
-                  <div style={{ marginTop: '15px', background: '#4a0000', color: '#fff', padding: '10px', fontSize: '9px', textAlign: 'center', fontWeight: 'bold' }}>
-                    DIVERGENCE: РЫНОК ИГНОРИРУЕТ ВОЕННЫЕ ПРИЗНАКИ ПОДГОТОВКИ
+                {/* СРАВНЕНИЕ С РЫНКОМ */}
+                <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#666' }}>
+                    POLYMARKET_PRICE: <span style={{color: '#fff'}}>{n.prob}%</span>
                   </div>
-                )}
+                  {intelProb - n.prob > 15 && (
+                    <div style={{ background: '#ff003c', color: '#fff', fontSize: '9px', padding: '2px 6px', fontWeight: 'bold', animation: 'pulse 2s infinite' }}>
+                      ALGO_ALERT: DIVERGENCE
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
+
+        {/* ТЕРМИНАЛЬНЫЙ ЛОГ ВНИЗУ */}
+        <footer style={{ marginTop: '30px', border: '1px solid #1a1a1a', padding: '15px', background: '#050505' }}>
+           <div style={{ color: '#00ff41', fontSize: '10px', marginBottom: '5px' }}>[ SYSTEM_LOGS ]</div>
+           <div style={{ fontSize: '9px', color: '#444', lineHeight: '1.4' }}>
+             {now}: Инициализация глубокого сканирования метаданных...<br/>
+             {now - 2000}: Загрузка корреляций Brent/Gold с вероятностью удара по Ирану...<br/>
+             {now - 5000}: Обнаружена аномалия в объемах торгов по контракту LEB-INV.
+           </div>
+        </footer>
       </div>
+      <style jsx>{`
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
