@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 
-export default function ThreatTerminalFinal() {
+export default function ThreatTerminalWithGauge() {
   const [lang, setLang] = useState<'RU' | 'EN'>('RU');
+  const threatIndex = 6.5; // Текущий расчетный индекс
 
   const DATA = {
     energy: [
@@ -26,54 +27,62 @@ export default function ThreatTerminalFinal() {
           { name: "Rundeep", win: "76.4%", pnl: "Professional" },
           { name: "Domer", win: "81%", pnl: "Political Expert" }
         ]
-      },
-      { 
-        id: "HORMUZ-BLOCK", title: "БЛОКАДА ОРМУЗА", feb: 36.5, mar: 58.2,
-        traders: [
-          { name: "Fredi9999", win: "79%", pnl: "High-Volume" }
-        ]
       }
     ],
     osint: [
-      { src: "SIGNAL_CONTEXT", text: "Мониторинг перемещения KC-707 и CVN-72. Данные требуют подтверждения из независимых источников." },
-      { src: "POL_CONTEXT", text: "Рынок реагирует на дипломатические визиты в Вашингтон. Рост волатильности USA-STRIKE." }
+      { src: "SIGNAL_CONTEXT", text: "Мониторинг перемещения KC-707 и CVN-72. Данные требуют подтверждения." },
+      { src: "POL_CONTEXT", text: "Рынок реагирует на волатильность USA-STRIKE." }
     ]
   };
+
+  // Расчет поворота стрелки (от -90 до 90 градусов для полукруга)
+  const needleRotation = (threatIndex / 10) * 180 - 90;
 
   return (
     <div style={{ background: '#000', minHeight: '100vh', padding: '20px', color: '#00ff41', fontFamily: 'monospace' }}>
       
-      {/* ИНДЕКС УГРОЗЫ (НОВЫЙ БЛОК) */}
-      <section style={{ border: '2px solid #ff003c', background: '#1a0000', padding: '15px', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', color: '#ff003c' }}>AGGREGATED THREAT INDEX</div>
-          <div style={{ fontSize: '32px', fontWeight: '900', color: '#ff003c' }}>6.5<span style={{fontSize: '14px'}}>/10</span></div>
+      {/* GRAPHIC GAUGE SECTION */}
+      <section style={{ border: '2px solid #ff003c', background: '#100', padding: '20px', marginBottom: '30px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '30px' }}>
+        
+        {/* SVG SPEEDOMETER */}
+        <div style={{ width: '200px', height: '120px', position: 'relative' }}>
+          <svg viewBox="0 0 100 60" style={{ width: '100%' }}>
+            {/* Трёхцветная дуга */}
+            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#333" strokeWidth="10" />
+            <path d="M 10 50 A 40 40 0 0 1 34 18" fill="none" stroke="#00ff41" strokeWidth="10" /> {/* Green (Safe) */}
+            <path d="M 34 18 A 40 40 0 0 1 66 18" fill="none" stroke="#ffaa00" strokeWidth="10" /> {/* Yellow (Caution) */}
+            <path d="M 66 18 A 40 40 0 0 1 90 50" fill="none" stroke="#ff003c" strokeWidth="10" /> {/* Red (Danger) */}
+            
+            {/* Стрелка (Needle) */}
+            <line x1="50" y1="50" x2="50" y2="15" stroke="#fff" strokeWidth="2" 
+                  transform={`rotate(${needleRotation}, 50, 50)`} style={{ transition: 'transform 1s ease-in-out' }} />
+            <circle cx="50" cy="50" r="3" fill="#fff" />
+          </svg>
+          <div style={{ textAlign: 'center', marginTop: '-10px', fontSize: '24px', fontWeight: '900', color: '#ff003c' }}>
+            {threatIndex}<span style={{fontSize: '12px'}}>/10</span>
+          </div>
         </div>
-        <div style={{ flex: 1, height: '10px', background: '#300', position: 'relative' }}>
-          <div style={{ width: '65%', height: '100%', background: '#ff003c' }}></div>
-        </div>
-        <div style={{ maxWidth: '600px', fontSize: '11px', lineHeight: '1.4', color: '#888' }}>
-          <strong style={{ color: '#fff' }}>ВНИМАНИЕ:</strong> Данный индекс является расчетным значением рыночных настроений и не должен использоваться как единственный источник для принятия решений. 
-          <br />
-          <span style={{ color: '#ff003c' }}>ПРИЧИНА:</span> Индекс базируется на вероятностях Polymarket (мнение трейдеров) и косвенных признаках OSINT. Он отражает финансовые ожидания эскалации, а не фактические военные планы.
+
+        {/* ПРЕДУПРЕЖДЕНИЕ */}
+        <div style={{ flex: 1, minWidth: '300px' }}>
+          <div style={{ fontSize: '10px', color: '#ff003c', marginBottom: '10px' }}>AGGREGATED THREAT INDEX (BETA)</div>
+          <div style={{ fontSize: '11px', lineHeight: '1.4', color: '#888' }}>
+            <strong style={{ color: '#fff' }}>ВНИМАНИЕ:</strong> Этот индекс — математическое усреднение ожиданий рынка (Polymarket) и цен на энергию. 
+            Его <strong style={{color: '#fff'}}>нельзя</strong> использовать как единственный источник для принятия решений. 
+            <br /><br />
+            <span style={{ color: '#ff003c' }}>ПОЧЕМУ:</span> Рынок отражает страхи и спекуляции трейдеров (например, RicoSauve666), а не секретные военные директивы. 
+            Разрыв между реальной угрозой и индексом может составлять до 48 часов.
+          </div>
         </div>
       </section>
 
-      {/* ENERGY PANEL */}
+      {/* ENERGY PANEL (BUSINESS INSIDER) */}
       <section style={{ border: '1px solid #333', marginBottom: '30px', background: '#050505' }}>
         <div style={{ background: '#fff', color: '#000', padding: '10px 20px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
-          <span>BUSINESS INSIDER // ENERGY (VERIFIED DATA)</span>
-          <button onClick={() => setLang(lang === 'RU' ? 'EN' : 'RU')} style={{cursor:'pointer', border:'none', background:'none', fontWeight:'bold'}}>{lang}</button>
+          <span>ENERGY BUSINESS INSIDER</span>
+          <button onClick={() => setLang(lang==='RU'?'EN':'RU')} style={{cursor:'pointer', fontWeight:'bold'}}>{lang}</button>
         </div>
         <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '13px' }}>
-          <thead>
-            <tr style={{ color: '#666', borderBottom: '1px solid #222' }}>
-              <th style={{ padding: '12px' }}>NAME</th>
-              <th style={{ padding: '12px' }}>PRICE</th>
-              <th style={{ padding: '12px' }}>CHANGE</th>
-              <th style={{ padding: '12px' }}>DATE/TIME</th>
-            </tr>
-          </thead>
           <tbody>
             {DATA.energy.map(e => (
               <tr key={e.name} style={{ borderBottom: '1px solid #111', color: '#fff' }}>
@@ -88,42 +97,26 @@ export default function ThreatTerminalFinal() {
       </section>
 
       {/* THREAT MODULES */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
         {DATA.threats.map(m => (
-          <div key={m.id} style={{ border: '1px solid #222', background: '#080808', padding: '25px' }}>
-            <h2 style={{ color: '#fff', fontSize: '16px', margin: '0 0 15px 0', borderLeft: '3px solid #00ff41', paddingLeft: '10px' }}>{m.title}</h2>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              <div style={{ flex: 1, background: '#000', border: '1px solid #1a1a1a', padding: '15px', textAlign: 'center' }}>
-                <div style={{ fontSize: '9px', color: '#666' }}>BY 28 FEB</div>
-                <div style={{ fontSize: '30px', color: '#3b82f6', fontWeight: 'bold' }}>{m.feb}%</div>
+          <div key={m.id} style={{ border: '1px solid #222', background: '#080808', padding: '20px' }}>
+            <h2 style={{ color: '#fff', fontSize: '14px', marginBottom: '15px', borderLeft: '3px solid #00ff41', paddingLeft: '10px' }}>{m.title}</h2>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+              <div style={{ flex: 1, border: '1px solid #1a1a1a', padding: '10px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', color: '#3b82f6', fontWeight: 'bold' }}>{m.feb}%</div>
+                <div style={{ fontSize: '9px', color: '#666' }}>FEBRUARY</div>
               </div>
-              <div style={{ flex: 1, background: '#000', border: '1px solid #1a1a1a', padding: '15px', textAlign: 'center' }}>
-                <div style={{ fontSize: '9px', color: '#666' }}>BY 31 MAR</div>
-                <div style={{ fontSize: '30px', color: '#ff003c', fontWeight: 'bold' }}>{m.mar}%</div>
+              <div style={{ flex: 1, border: '1px solid #1a1a1a', padding: '10px', textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', color: '#ff003c', fontWeight: 'bold' }}>{m.mar}%</div>
+                <div style={{ fontSize: '9px', color: '#666' }}>MARCH</div>
               </div>
             </div>
-            <div>
-              <div style={{ fontSize: '10px', color: '#00ff41', marginBottom: '8px' }}>ВЕРИФИЦИРОВАННЫЕ ТРЕЙДЕРЫ:</div>
-              {m.traders.map(t => (
-                <div key={t.name} style={{ marginBottom: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#fff' }}>
-                    <span>{t.name} (Acc: {t.win})</span>
-                    <span style={{ color: '#3b82f6' }}>{t.pnl}</span>
-                  </div>
-                  {t.note && <div style={{ fontSize: '9px', color: '#ff003c' }}>{t.note}</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* OSINT FEED */}
-      <div style={{ border: '1px solid #ff003c', padding: '20px', background: '#0a0000' }}>
-        <h3 style={{ color: '#ff003c', fontSize: '11px', margin: '0 0 15px 0' }}>// GEOPOLITICAL CONTEXT FEED (NOT FOR TRADING DECISIONS)</h3>
-        {DATA.osint.map((o, idx) => (
-          <div key={idx} style={{ marginBottom: '8px', fontSize: '12px', color: '#fff' }}>
-            <span style={{ color: '#666' }}>SOURCE: {o.src} // </span> {o.text}
+            {m.traders.map(t => (
+              <div key={t.name} style={{ fontSize: '11px', color: '#fff', marginBottom: '4px' }}>
+                {t.name} | Acc: <span style={{color: '#00ff41'}}>{t.win}</span> | PNL: <span style={{color: '#3b82f6'}}>{t.pnl}</span>
+                {t.note && <div style={{color: '#ff003c', fontSize: '9px'}}>{t.note}</div>}
+              </div>
+            ))}
           </div>
         ))}
       </div>
