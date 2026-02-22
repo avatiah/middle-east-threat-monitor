@@ -1,162 +1,94 @@
 'use client';
 
 import React, { useState } from 'react';
-// Используем относительный путь к ранее созданному модулю OSINT
+// Импортируем наш основной компонент ленты для единообразия дизайна
 import { OsintFeed } from '../../../components/terminal/OsintFeed';
 
-export default function SandboxPage() {
-  const [query, setQuery] = useState('Israel Iran escalation 2026');
-  const [status, setStatus] = useState('IDLE');
-  const [results, setResults] = useState<{src: string, text: string}[]>([]);
+export default function SmartSandbox() {
+  const [news, setNews] = useState<{src: string, text: string}[]>([]);
+  const [status, setStatus] = useState('READY');
+  const [loading, setLoading] = useState(false);
 
-  // Функция для запроса к нашему Node.js Backend
-  const handleSearch = async () => {
-    setStatus('CONNECTING_TO_BACKEND...');
-    
+  // Твой личный ключ интегрирован
+  const API_KEY = '4987948b76ab448e9d8d4d275951ba30'; 
+
+  const fetchLiveOSINT = async () => {
+    setLoading(true);
+    setStatus('SCANNING_GLOBAL_SOURCES...');
     try {
-      // Пытаемся получить реальные данные из локального сервера
-      const response = await fetch(`http://localhost:3001/api/search?q=${encodeURIComponent(query)}`);
-      
-      if (!response.ok) throw new Error('Backend error');
-      
+      // Запрос к NewsAPI: ищем самые свежие новости на английском
+      const response = await fetch(
+        `https://newsapi.org/v2/everything?q=Israel+Iran+military+OR+strike&apiKey=${API_KEY}&pageSize=5&language=en`
+      );
       const data = await response.json();
-      setResults(data);
-      setStatus('DATA_RECEIVED');
-    } catch (error) {
-      console.error("Connection failed:", error);
       
-      // Фоллбек (запасной вариант), если сервер еще не запущен
-      setStatus('BACKEND_OFFLINE_USING_MOCK_DATA');
-      setTimeout(() => {
-        setResults([
-          { 
-            src: "SANDBOX_INTERNAL", 
-            text: `LOCAL_MODE: Server at port 3001 unreachable. Showing cached simulation for: ${query}` 
-          },
-          { 
-            src: "INSS_SIMULATOR", 
-            text: "Strategic tension index: 6.8. Increase in maritime signal activity detected near Hormuz." 
-          }
-        ]);
-      }, 800);
+      if (data.articles) {
+        // Преобразуем формат NewsAPI в формат нашего терминала
+        const formattedNews = data.articles.map((article: any) => ({
+          src: article.source.name.toUpperCase(),
+          text: article.title
+        }));
+        setNews(formattedNews);
+        setStatus('SCAN_COMPLETE');
+      } else {
+        setStatus('ERROR: NO_ARTICLES_FOUND');
+      }
+    } catch (e) {
+      console.error(e);
+      setStatus('CONNECTION_FAILED');
     }
+    setLoading(false);
   };
 
   return (
-    <div style={{ 
-      background: '#000', 
-      minHeight: '100vh', 
-      padding: '40px', 
-      color: '#00ff41', 
-      fontFamily: 'monospace' 
-    }}>
-      {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '10px' }}>
-        <h1 style={{ fontSize: '18px', margin: 0 }}>// DATA_SANDBOX_V1.1</h1>
-        <div style={{ 
-          fontSize: '10px', 
-          background: status.includes('OFFLINE') ? '#300' : '#030', 
-          padding: '4px 8px',
-          color: status.includes('OFFLINE') ? '#ff003c' : '#00ff41',
-          border: `1px solid ${status.includes('OFFLINE') ? '#ff003c' : '#00ff41'}`
-        }}>
-          STATUS: {status}
+    <div style={{ background: '#000', minHeight: '100vh', padding: '40px', color: '#00ff41', fontFamily: 'monospace' }}>
+      <header style={{ borderBottom: '1px solid #333', paddingBottom: '20px', marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '20px', margin: 0 }}>// OSINT_LIVE_SCANNER_V1.5</h1>
+        <div style={{ fontSize: '10px', color: '#666', marginTop: '5px' }}>
+          CONNECTED_TO: NEWSAPI.ORG // API_STATUS: ACTIVE
         </div>
-      </div>
-      
-      {/* SEARCH CONTROL PANEL */}
-      <div style={{ margin: '30px 0', padding: '25px', border: '1px dashed #444', background: '#050505' }}>
-        <p style={{ fontSize: '11px', color: '#888', marginBottom: '15px' }}>
-          INPUT SOURCE PARAMETERS FOR DEEP-WEB SCANNERS AND NEWS AGGREGATORS:
+      </header>
+
+      <div style={{ background: '#080808', border: '1px dashed #444', padding: '30px', textAlign: 'center' }}>
+        <p style={{ fontSize: '12px', color: '#888', marginBottom: '20px' }}>
+          SEARCH_QUERY: "Israel Iran military OR strike"
         </p>
-        
-        <div style={{ display: 'flex', gap: '15px' }}>
-          <input 
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter search keywords..."
-            style={{ 
-              background: '#000', 
-              border: '1px solid #444', 
-              color: '#00ff41', 
-              padding: '12px', 
-              flex: 1,
-              outline: 'none',
-              fontFamily: 'monospace'
-            }}
-          />
-          <button 
-            onClick={handleSearch}
-            disabled={status === 'CONNECTING_TO_BACKEND...'}
-            style={{ 
-              background: '#00ff41', 
-              color: '#000', 
-              border: 'none', 
-              padding: '0 30px', 
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '12px',
-              opacity: status === 'CONNECTING_TO_BACKEND...' ? 0.5 : 1
-            }}
-          >
-            RUN_SCAN
-          </button>
+        <button 
+          onClick={fetchLiveOSINT}
+          disabled={loading}
+          style={{ 
+            background: loading ? '#222' : '#00ff41', 
+            color: '#000', 
+            border: 'none', 
+            padding: '15px 40px', 
+            cursor: 'pointer', 
+            fontWeight: 'bold',
+            fontSize: '14px',
+            letterSpacing: '1px'
+          }}
+        >
+          {loading ? 'EXECUTING_SCAN...' : 'RUN_GLOBAL_SCAN'}
+        </button>
+        <div style={{ marginTop: '15px', fontSize: '10px', color: status.includes('ERROR') ? '#ff003c' : '#00ff41' }}>
+          SYSTEM_STATUS: {status}
         </div>
       </div>
 
-      {/* RESULTS DISPLAY */}
-      {results.length > 0 && (
-        <div style={{ animation: 'fadeIn 0.5s ease-in' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h2 style={{ fontSize: '14px', color: '#fff', margin: 0 }}>// SCAN_RESULTS_BUFFER:</h2>
-            <span style={{ fontSize: '10px', color: '#666' }}>{results.length} ENTRIES FOUND</span>
-          </div>
+      {news.length > 0 && (
+        <div style={{ marginTop: '40px' }}>
+          <h2 style={{ fontSize: '14px', color: '#fff', marginBottom: '10px' }}>// LIVE_INTEL_BUFFER:</h2>
+          {/* Используем наш стандартный компонент OSINT */}
+          <OsintFeed events={news} />
           
-          <OsintFeed events={results} />
-          
-          <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
-            <button 
-              onClick={() => alert('Sending to verification pool...')}
-              style={{ 
-                background: 'none', 
-                border: '1px solid #00ff41', 
-                color: '#00ff41', 
-                padding: '10px 20px', 
-                cursor: 'pointer',
-                fontSize: '11px'
-              }}
-            >
-              APPROVE_FOR_TERMINAL
-            </button>
-            <button 
-              onClick={() => setResults([])}
-              style={{ 
-                background: 'none', 
-                border: '1px solid #ff003c', 
-                color: '#ff003c', 
-                padding: '10px 20px', 
-                cursor: 'pointer',
-                fontSize: '11px'
-              }}
-            >
-              DISCARD_SIGNAL
-            </button>
+          <div style={{ marginTop: '20px', color: '#444', fontSize: '10px' }}>
+            NOTE: CLICKING 'RUN_SCAN' AGAIN WILL REFRESH DATA FROM GLOBAL REPOSTORIES.
           </div>
         </div>
       )}
 
-      {/* INFO FOOTER */}
-      <footer style={{ marginTop: '60px', borderTop: '1px solid #111', paddingTop: '20px', fontSize: '10px', color: '#333' }}>
-        <p>CAUTION: DATA IN SANDBOX MODE IS UNFILTERED. SOURCE CREDIBILITY MUST BE VERIFIED LOCALLY BEFORE DEPLOYMENT TO MAIN TERMINAL AUDIT.</p>
-        <p>PROJECT: THREAT_ENGINE // SESSION_TYPE: RESEARCH_DEVELOPMENT</p>
+      <footer style={{ marginTop: '60px', paddingTop: '20px', borderTop: '1px solid #111', fontSize: '10px', color: '#222' }}>
+        DEVELOPMENT_SANDBOX // RAW_DATA_ONLY // SHIN_BET_AUDIT_PENDING
       </footer>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }
